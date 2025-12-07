@@ -9,7 +9,7 @@ import SizeSelector from "./SizeSelector"
 export default function Landing() {
   const navItems = [
     { text: "Home", isActive: true },
-    { text: "Catelog", isActive: false },
+    { text: "Collections", isActive: false, href: "/Collections" },
     { text: "Contact Us", isActive: false },
   ]
 

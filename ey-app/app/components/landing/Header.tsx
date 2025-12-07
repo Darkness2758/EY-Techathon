@@ -1,7 +1,7 @@
 import { ShoppingCart, Heart } from "lucide-react"
 import { useState } from "react"
 import DataStat from "./DataStat"
-import Switch from "./switch"
+
 
 import ScanOverlay from "./ScanOverlay"
 
@@ -60,14 +60,17 @@ export default function Header({ navItems }: HeaderProps) {
           <div className="flex items-center space-x-2">
             <button
               onClick={toggleAiMode}
-              className="relative w-12 h-6 border border-white/50"
+              className="relative w-12 h-6 border border-yellow-300 rounded-full bg-neutral-800 focus:outline-none"
             >
               <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-black transition-transform duration-300
-                  ${aiMode ? "translate-x-6" : ""}
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-black transition-transform duration-300 rounded-full border-yellow-200 border
+                  ${aiMode ? "translate-x-6"  : ""}
                 `}
               />
-            </button>
+                    
+            </button> 
+       <DataStat label="AI mode is" />
+            {aiMode ? <span className="text-yellow-300 text-xs">On</span> : <span className="text-gray-400 text-xs">Off</span>}
           </div>
         </div>
       </header>

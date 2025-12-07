@@ -1,5 +1,5 @@
 type DataStatProps = {
-  value: string
+  value?: string
   label: string
 }
 
