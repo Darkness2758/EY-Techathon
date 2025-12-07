@@ -1,4 +1,7 @@
+"use client";
+
 import React, { FC, useState } from 'react';
+import AnimatedCounter from "../components/landing/AnimatedCounter";
 import type { LucideIcon } from 'lucide-react';
 import {
   ShoppingCart,
@@ -51,7 +54,7 @@ interface DataStatProps {
 
 const DataStat: FC<DataStatProps> = ({ value, label }) => (
   <div className="flex flex-col items-center">
-    <span className="text-white text-base">{value}</span>
+    <AnimatedCounter value={value} className="text-white text-base" />
     <span className="text-gray-400 text-[8px] uppercase">{label}</span>
   </div>
 );
@@ -86,7 +89,9 @@ interface MetricBoxProps {
 
 const MetricBox: FC<MetricBoxProps> = ({ value, label, color }) => (
   <div className="p-4 border border-white/10 bg-neutral-900/60 text-center">
-    <p className={`text-3xl font-bold ${color}`}>{value}</p>
+    <p className={`text-3xl font-bold ${color}`}>
+      <AnimatedCounter value={value} />
+    </p>
     <p className="text-[9px] text-gray-400 uppercase tracking-widest">{label}</p>
   </div>
 );
