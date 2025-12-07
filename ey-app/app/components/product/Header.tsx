@@ -42,7 +42,9 @@ export default function Header({ navItems }: { navItems: NavItem[] }) {
           <DataStat value="<10>" label="Colors" />
         </div>
         <Heart className="w-5 h-5 cursor-pointer" />
+   
         <ShoppingCart className="w-5 h-5 cursor-pointer" />
+         
       </div>
     </header>
   )

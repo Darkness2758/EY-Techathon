@@ -1,6 +1,6 @@
 import { ShoppingCart, Heart } from "lucide-react"
 import DataStat from "./DataStat"
-
+import Switch from "./switch"
 type NavItem = {
   text: string
   isActive: boolean
@@ -35,6 +35,9 @@ export default function Header({ navItems }: HeaderProps) {
         <div className="flex space-x-4 text-white">
           <Heart className="w-5 h-5 cursor-pointer" />
           <ShoppingCart className="w-5 h-5 cursor-pointer" />
+          <Switch />
+
+           
         </div>
       </div>
     </header>

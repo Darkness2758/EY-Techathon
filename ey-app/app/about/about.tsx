@@ -153,7 +153,7 @@ const PhilosophyContentView: FC = () => (
   <div className="flex px-20 pt-20 z-20 relative">
     <div className="w-1/2 pr-10">
       <h2 className="border-b pb-2 mb-4 flex items-center gap-2">
-        <Zap className="text-red-400" /> ORIGIN SYSTEM 001
+        <Zap className="text-red-400" /> ORIGIN 
       </h2>
       <p className="text-xs text-gray-400 font-mono leading-relaxed">
         Built against obsolescence. Designed for endurance. Rejecting fast
