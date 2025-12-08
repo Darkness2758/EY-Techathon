@@ -1,148 +1,200 @@
 "use client"
-import Header from "../components/product/Header";
-import { useState } from "react";
-import { Star } from "lucide-react";
-import Image from "next/image";
-import SearchBar from "../components/collections/SearchBar";
- const handleSearch = (query) => {
-    console.log("Searching for:", query);
-  };
+
+import { useState, useMemo } from "react"
+import { Star, Check } from "lucide-react"
+import Header from "../components/landing/Header"
+import SearchBar from "../components/collections/SearchBar"
+
+type Product = {
+  id: number
+  name: string
+  price: number
+  image: string
+  rating: number
+  category: string
+  brand: string
+}
+
+const PRODUCTS: Product[] = [
+  {
+    id: 1,
+    name: "SKULL PRINTED JACKET",
+    price: 399,
+    image: "https://i.pinimg.com/1200x/f3/0f/0d/f30f0d91fea92953aa9eb66c8177b016.jpg",
+    rating: 4.8,
+    category: "Jacket",
+    brand: "Wink",
+  },
+  {
+    id: 2,
+    name: "BLACK HOODIE",
+    price: 155,
+    image: "https://i.pinimg.com/1200x/9e/fa/1c/9efa1c43d720d4f4a1aef2f775570b3b.jpg",
+    rating: 4.2,
+    category: "Hoodie",
+    brand: "Uniqlo",
+  },
+  {
+    id: 3,
+    name: "ARM GLOVES",
+    price: 250,
+    image: "https://i.pinimg.com/1200x/21/bd/3a/21bd3ac4024631f48b915faf8692a085.jpg",
+    rating: 4.5,
+    category: "Gloves",
+    brand: "Zara",
+  },
+  {
+    id: 4,
+    name: "TRACK PANTS",
+    price: 150,
+    image: "https://i.pinimg.com/736x/42/9c/e8/429ce897ccbaa3efc122d47ab18eebe5.jpg",
+    rating: 4.9,
+    category: "Pants",
+    brand: "Wink",
+  },
+]
+
 export default function ProductPage() {
-const navItems = [
-  { text: "Home", isActive: false, href: "/" },
-  { text: "Collections", isActive: true, href: "/Collections" },
-  { text: "About", isActive: false },
-  { text: "Contact", isActive: false },
-]
-const products = [
-    {
-        id: 1,
-        name: "Premium Wireless Headphones",
-        description: "Experience crystal-clear sound with our premium wireless headphones. Features active noise cancellation and 30-hour battery life.",
-        price: 299.99,
-        image: "https://www.onleyjames.com/cdn/shop/files/unisex-heavy-blend-hoodie-black-front-63f5352698fbf.jpg?v=1689511423&width=823"
-  
-    },
-        {
-        id: 2,
-        name: "Premium Wireless Headphones",
-        description: "Experience crystal-clear sound with our premium wireless headphones. Features active noise cancellation and 30-hour battery life.",
-        price: 299.99,
-        image: "https://www.onleyjames.com/cdn/shop/files/unisex-heavy-blend-hoodie-black-front-67881f330b817.jpg?v=1736975608&width=360",
-                
-  
-    },
-        {
-        id: 3,
-        name: "Premium Wireless Headphones",
-        description: "Experience crystal-clear sound with our premium wireless headphones. Features active noise cancellation and 30-hour battery life.",
-        price: 299.99,
-        image: "https://www.onleyjames.com/cdn/shop/files/unisex-heavy-blend-hoodie-black-front-67881f330b817.jpg?v=1736975608&width=360",
-                
-  
-    },
+  const [search, setSearch] = useState("")
+  const [category, setCategory] = useState("All")
+  const [brands, setBrands] = useState<string[]>(["Wink", "Uniqlo", "Zara"])
+  const [maxPrice, setMaxPrice] = useState(500)
 
-        {
-        id: 4,
-        name: "Premium Wireless Headphones",
-        description: "Experience crystal-clear sound with our premium wireless headphones. Features active noise cancellation and 30-hour battery life.",
-        price: 299.99,
-        image: "https://www.onleyjames.com/cdn/shop/files/unisex-heavy-blend-hoodie-black-front-67881f330b817.jpg?v=1736975608&width=360",
-                
-  
-    },
-    
-    {
-        id: 5,
-        name: "Premium Wireless Headphones",
-        description: "Experience crystal-clear sound with our premium wireless headphones. Features active noise cancellation and 30-hour battery life.",
-        price: 299.99,
-        image: "https://www.onleyjames.com/cdn/shop/files/unisex-heavy-blend-hoodie-black-front-67881f330b817.jpg?v=1736975608&width=360",
-                
-  
-    },
+  const categories = ["All", "Jacket", "Hoodie", "Gloves", "Pants"]
+  const allBrands = ["Wink", "Uniqlo", "Zara"]
 
+  const filtered = useMemo(() => {
+    return PRODUCTS.filter(p => {
+      return (
+        p.name.toLowerCase().includes(search.toLowerCase()) &&
+        p.price <= maxPrice &&
+        (category === "All" || p.category === category) &&
+        brands.includes(p.brand)
+      )
+    })
+  }, [search, category, brands, maxPrice])
 
-    
-]
+  const toggleBrand = (b: string) =>
+    setBrands(prev =>
+      prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b]
+    )
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-gray-200 overflow-hidden pl-12 pr-12 pt-16">
-        <Header navItems={navItems} />
-            <div className="flex flex-col items-center justify-center my-6  ">
-      
+    <div className="min-h-screen bg-neutral-950 text-gray-300 font-mono">
+      <Header
+        navItems={[
+          { text: "CATALOG", isActive: false },
+          { text: "COLLECTIONS", isActive: true },
+          { text: "ABOUT", isActive: false },
+        ]}
+      />
 
-      <SearchBar onSearch={handleSearch} />
-    </div>
-      <div className="text-center m-8 p-8 border border-gray-700 rounded-lg bg-neutral-800/50 shadow-lg  grid grid-cols-2" data-testid="featured-showcase" >
-         <div> <h1 className=" text-4xl text-white-100 font-mono mb-4 " data-testid="showcase-heading">
-            <Star className="inline-block h-10 w-10 text-black/15 mb-2 " />
-            {" <"}Featured Showcase{ "> "}
-            <Star className="inline-block h-10 w-10 text-black/15 mb-2 " />
-
-          </h1>
-          <hr className="border-amber-50/20 " />
-          <p className="text-xl text-gray-600   "  data-testid="showcase-description">
-
-            Discover our collection of premium products
-          </p>
-           <hr className="border-gray-700 " />
-           </div>
-<div>
-          <img
-            src="https://www.whitevictoria.com/image/cache/catalog/Article%20Cover/Stylish,%20Comfortable%20Work%20Outfits01-2280x600w.jpg"
-            alt="Featured"
-            width={500}
-            height={500}
-            className="w-full h-40 object-cover rounded-md mt-4"
-          />
+      <main className="pt-36 max-w-7xl mx-auto px-8 space-y-12">
+        <div className="max-w-lg">
+          <SearchBar onSearch={setSearch} />
         </div>
-          </div>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8" data-testid="featured-products-grid p-8 ">
-          {products.map((product) => (
-            <div
-              key={product.id}
-              className=" rounded-lg shadow-lg overflow-hidden hover:shadow-2xl transition-shadow duration-300 border border-gray-700 bg-neutral-800/50"
-              data-testid={`product-card-${product.id}`}
-            >
-              <div className="relative h-64 bg-gray-200">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                   className="w-full h-full object-cover"
-                  data-testid={`product-image-${product.id}`}
-                />
-                <div className="absolute bottom-2 right-2 bg-black text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-current" />
-                  4.5
+
+        <div className="grid lg:grid-cols-[260px_1fr] gap-12">
+          <aside className="space-y-6 border border-white/10 bg-neutral-900 p-6 h-fit">
+            <span className="text-xs uppercase tracking-widest text-gray-500">
+              Filters
+            </span>
+
+            <div className="space-y-3">
+              <span className="text-xs uppercase tracking-wider text-gray-400">
+                Category
+              </span>
+              {categories.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={`w-full text-left px-3 py-2 border text-xs transition
+                    ${
+                      c === category
+                        ? "border-blue-400 text-blue-400"
+                        : "border-white/10 hover:border-white/30"
+                    }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <span className="text-xs uppercase tracking-wider text-gray-400">
+                Brand
+              </span>
+              {allBrands.map(b => (
+                <button
+                  key={b}
+                  onClick={() => toggleBrand(b)}
+                  className={`flex items-center justify-between w-full px-3 py-2 border text-xs
+                    ${
+                      brands.includes(b)
+                        ? "border-blue-400 text-blue-400"
+                        : "border-white/10 hover:border-white/30"
+                    }`}
+                >
+                  {b}
+                  {brands.includes(b) && <Check className="w-3 h-3" />}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <span className="text-xs uppercase tracking-wider text-gray-400">
+                Max Price
+              </span>
+              <input
+                type="range"
+                min={50}
+                max={500}
+                value={maxPrice}
+                onChange={e => setMaxPrice(+e.target.value)}
+                className="w-full accent-blue-400"
+              />
+              <span className="text-sm text-gray-400">₹ {maxPrice}</span>
+            </div>
+          </aside>
+
+          <section className="grid sm:grid-cols-2 xl:grid-cols-3 gap-8">
+            {filtered.map(p => (
+              <div
+                key={p.id}
+                className="border border-white/10 bg-neutral-900 hover:border-blue-400 transition"
+              >
+                <div className="relative h-72">
+                  <img
+                    src={p.image}
+                    className="w-full h-full object-cover opacity-80 hover:opacity-100 transition"
+                  />
+                  <div className="absolute top-3 right-3 px-3 py-1 text-xs border border-blue-400 text-blue-400 flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-blue-400" />
+                    {p.rating}
+                  </div>
+                </div>
+
+                <div className="p-5 space-y-3">
+                  <span className="text-xs uppercase text-gray-500">
+                    {p.brand}
+                  </span>
+
+                  <h3 className="text-sm tracking-tight text-gray-200">
+                    {p.name}
+                  </h3>
+
+                  <div className="flex justify-between items-center pt-4 border-t border-white/10">
+                    <span className="text-gray-400">₹ {p.price}</span>
+                    <button className="px-4 py-2 text-xs uppercase tracking-widest border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-black transition">
+                      View
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-500 mb-2" data-testid={`product-name-${product.id}`}>
-                  {product.name}
-                </h3>
-                <p className="text-gray-600 mb-4" data-testid={`product-description-${product.id}`}>
-                  {product.description}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold text-white" data-testid={`product-price-${product.id}`}>
-                    ${product.price}
-                  </span>
-                  <button
-                    data-testid={`view-details-button-${product.id}`}
-                    className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-500 transition-colors border border-white/20"
-                  >
-                    View Details
-                  </button>
-                  
-                   </div>
-              </div>
-            </div>
-          ))}
+            ))}
+          </section>
         </div>
-
-      </div>
-      
-   
+      </main>
+    </div>
   )
 }
