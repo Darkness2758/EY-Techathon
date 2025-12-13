@@ -1,7 +1,7 @@
 "use client"
 
 import AboutUs from "../../about/about"
-import Header from "./Header"
+import Header from "../Header"
 import HeroSection from "./HeroSection"
 import SidebarIndicators from "./SidebarIndicators"
 import SizeSelector from "./SizeSelector"

@@ -1,70 +1,49 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Star, Check } from "lucide-react"
-import Header from "../components/landing/Header"
+import Header from "../components/Header"
 import SearchBar from "../components/collections/SearchBar"
-
-type Product = {
-  id: number
-  name: string
-  price: number
-  image: string
-  rating: number
-  category: string
-  brand: string
-}
-
-const PRODUCTS: Product[] = [
-  {
-    id: 1,
-    name: "SKULL PRINTED JACKET",
-    price: 399,
-    image: "https://i.pinimg.com/1200x/f3/0f/0d/f30f0d91fea92953aa9eb66c8177b016.jpg",
-    rating: 4.8,
-    category: "Jacket",
-    brand: "Wink",
-  },
-  {
-    id: 2,
-    name: "BLACK HOODIE",
-    price: 155,
-    image: "https://i.pinimg.com/1200x/9e/fa/1c/9efa1c43d720d4f4a1aef2f775570b3b.jpg",
-    rating: 4.2,
-    category: "Hoodie",
-    brand: "Uniqlo",
-  },
-  {
-    id: 3,
-    name: "ARM GLOVES",
-    price: 250,
-    image: "https://i.pinimg.com/1200x/21/bd/3a/21bd3ac4024631f48b915faf8692a085.jpg",
-    rating: 4.5,
-    category: "Gloves",
-    brand: "Zara",
-  },
-  {
-    id: 4,
-    name: "TRACK PANTS",
-    price: 150,
-    image: "https://i.pinimg.com/736x/42/9c/e8/429ce897ccbaa3efc122d47ab18eebe5.jpg",
-    rating: 4.9,
-    category: "Pants",
-    brand: "Wink",
-  },
-]
+import { Product } from "../types/products"
+import { getProducts, getUniqueBrands, getUniqueCategories } from "../lib/product"
 
 export default function ProductPage() {
+  const [products, setProducts] = useState<Product[]>([])
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("All")
-  const [brands, setBrands] = useState<string[]>(["Wink", "Uniqlo", "Zara"])
+  const [brands, setBrands] = useState<string[]>([])
   const [maxPrice, setMaxPrice] = useState(500)
+  const [loading, setLoading] = useState(true)
 
-  const categories = ["All", "Jacket", "Hoodie", "Gloves", "Pants"]
-  const allBrands = ["Wink", "Uniqlo", "Zara"]
+
+  useEffect(() => {
+    async function loadProducts() {
+      setLoading(true)
+      const data = await getProducts()
+      setProducts(data)
+
+      if (data.length > 0) {
+        const uniqueBrands = getUniqueBrands(data)
+        setBrands(uniqueBrands)
+      }
+      
+      setLoading(false)
+    }
+    
+    loadProducts()
+  }, [])
+
+  const navItems = [
+    { text: "Home", isActive: false, href: "#" },
+    { text: "Collections", isActive: true, href: "/Collections" },
+    { text: "Contact Us", isActive: false },
+  ]
+
+  const categories = ["All", ...getUniqueCategories(products)]
+  const allBrands = getUniqueBrands(products)
 
   const filtered = useMemo(() => {
-    return PRODUCTS.filter(p => {
+    return products.filter(p => {
       return (
         p.name.toLowerCase().includes(search.toLowerCase()) &&
         p.price <= maxPrice &&
@@ -72,21 +51,25 @@ export default function ProductPage() {
         brands.includes(p.brand)
       )
     })
-  }, [search, category, brands, maxPrice])
+  }, [products, search, category, brands, maxPrice])
 
   const toggleBrand = (b: string) =>
     setBrands(prev =>
       prev.includes(b) ? prev.filter(x => x !== b) : [...prev, b]
     )
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-gray-300 font-mono flex items-center justify-center">
+        <div className="text-gray-400">Loading products...</div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-neutral-950 text-gray-300 font-mono">
       <Header
-        navItems={[
-          { text: "CATALOG", isActive: false },
-          { text: "COLLECTIONS", isActive: true },
-          { text: "ABOUT", isActive: false },
-        ]}
+        navItems={navItems}
       />
 
       <main className="pt-36 max-w-7xl mx-auto px-8 space-y-12">
@@ -120,26 +103,28 @@ export default function ProductPage() {
               ))}
             </div>
 
-            <div className="space-y-3">
-              <span className="text-xs uppercase tracking-wider text-gray-400">
-                Brand
-              </span>
-              {allBrands.map(b => (
-                <button
-                  key={b}
-                  onClick={() => toggleBrand(b)}
-                  className={`flex items-center justify-between w-full px-3 py-2 border text-xs
-                    ${
-                      brands.includes(b)
-                        ? "border-blue-400 text-blue-400"
-                        : "border-white/10 hover:border-white/30"
-                    }`}
-                >
-                  {b}
-                  {brands.includes(b) && <Check className="w-3 h-3" />}
-                </button>
-              ))}
-            </div>
+            {allBrands.length > 0 && (
+              <div className="space-y-3">
+                <span className="text-xs uppercase tracking-wider text-gray-400">
+                  Brand
+                </span>
+                {allBrands.map(b => (
+                  <button
+                    key={b}
+                    onClick={() => toggleBrand(b)}
+                    className={`flex items-center justify-between w-full px-3 py-2 border text-xs
+                      ${
+                        brands.includes(b)
+                          ? "border-blue-400 text-blue-400"
+                          : "border-white/10 hover:border-white/30"
+                      }`}
+                  >
+                    {b}
+                    {brands.includes(b) && <Check className="w-3 h-3" />}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="space-y-3">
               <span className="text-xs uppercase tracking-wider text-gray-400">
@@ -158,40 +143,47 @@ export default function ProductPage() {
           </aside>
 
           <section className="grid sm:grid-cols-2 xl:grid-cols-3 gap-8">
-            {filtered.map(p => (
-              <div
-                key={p.id}
-                className="border border-white/10 bg-neutral-900 hover:border-blue-400 transition"
-              >
-                <div className="relative h-72">
-                  <img
-                    src={p.image}
-                    className="w-full h-full object-cover opacity-80 hover:opacity-100 transition"
-                  />
-                  <div className="absolute top-3 right-3 px-3 py-1 text-xs border border-blue-400 text-blue-400 flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-blue-400" />
-                    {p.rating}
-                  </div>
-                </div>
-
-                <div className="p-5 space-y-3">
-                  <span className="text-xs uppercase text-gray-500">
-                    {p.brand}
-                  </span>
-
-                  <h3 className="text-sm tracking-tight text-gray-200">
-                    {p.name}
-                  </h3>
-
-                  <div className="flex justify-between items-center pt-4 border-t border-white/10">
-                    <span className="text-gray-400">₹ {p.price}</span>
-                    <button className="px-4 py-2 text-xs uppercase tracking-widest border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-black transition">
-                      View
-                    </button>
-                  </div>
-                </div>
+            {filtered.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-gray-400">No products found matching your filters.</p>
               </div>
-            ))}
+            ) : (
+              filtered.map(p => (
+                <div
+                  key={p.id}
+                  className="border border-white/10 bg-neutral-900 hover:border-blue-400 transition"
+                >
+                  <div className="relative h-72">
+                    <img
+                      src={p.image}
+                      alt={p.name}
+                      className="w-full h-full object-cover opacity-80 hover:opacity-100 transition"
+                    />
+                    <div className="absolute top-3 right-3 px-3 py-1 text-xs border border-blue-400 text-blue-400 flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-blue-400" />
+                      {p.rating}
+                    </div>
+                  </div>
+
+                  <div className="p-5 space-y-3">
+                    <span className="text-xs uppercase text-gray-500">
+                      {p.brand}
+                    </span>
+
+                    <h3 className="text-sm tracking-tight text-gray-200">
+                      {p.name}
+                    </h3>
+
+                    <div className="flex justify-between items-center pt-4 border-t border-white/10">
+                      <span className="text-gray-400">₹ {p.price}</span>
+                      <button className="px-4 py-2 text-xs uppercase tracking-widest border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-black transition">
+                        View
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </section>
         </div>
       </main>
