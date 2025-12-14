@@ -17,7 +17,7 @@ export default function ProductPage() {
 
       <div className="flex justify-center pt-32 px-12">
         <ProductImage />
-        <ProductDetailsPanel />
+        <ProductDetailsPanel  />
       </div>
     </div>
   )

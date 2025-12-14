@@ -1,5 +1,5 @@
 "use client"
-
+import AddToCart from "../AddToCard"
 import { useState } from "react"
 import SizeSelector from "./SizeSelector"
 import SpecsBlock from "./SpecsBlock"
@@ -32,9 +32,7 @@ export default function ProductDetailsPanel() {
       <div className="mt-2">
       <SpecsBlock specs={SPECS} />
       </div>
-      <button className="mt-8 w-full py-3 bg-white text-black uppercase">
-        Add to Cart
-      </button>
+     <AddToCart>Add TO CARD </AddToCart>
     </div>
   )
 }

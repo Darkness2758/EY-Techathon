@@ -2,10 +2,11 @@
 
 import { useState, useMemo, useEffect } from "react"
 import { Star, Check } from "lucide-react"
-import Header from "../components/Header"
+import Header from "../components/product/Header"
 import SearchBar from "../components/collections/SearchBar"
 import { Product } from "../types/products"
 import { getProducts, getUniqueBrands, getUniqueCategories } from "../lib/product"
+import AddToCart from "@/components/AddToCard"
 
 export default function ProductPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -179,6 +180,7 @@ export default function ProductPage() {
                       <button className="px-4 py-2 text-xs uppercase tracking-widest border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-black transition">
                         View
                       </button>
+                      <AddToCart className="px-4 py-2 text-xs uppercase tracking-widest border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-black transition"/>
                     </div>
                   </div>
                 </div>
