@@ -180,7 +180,7 @@ export default function ProductPage() {
                       <button className="px-4 py-2 text-xs uppercase tracking-widest border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-black transition">
                         View
                       </button>
-                      <AddToCart className="px-4 py-2 text-xs uppercase tracking-widest border border-blue-400 text-blue-400 hover:bg-blue-400 hover:text-black transition"/>
+                      
                     </div>
                   </div>
                 </div>

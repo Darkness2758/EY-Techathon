@@ -37,7 +37,6 @@ export class IntentDetector {
       parameters: {}
     }
 
-    // Detect primary intent
     let detectedIntent: Intent['type'] = 'general_help'
     let confidence = 0.7
 
@@ -61,10 +60,10 @@ export class IntentDetector {
       confidence = 0.9
     }
 
-    // Detect entities
+    
     const entities: Intent['entities'] = {}
     
-    // Category detection
+    
     for (const [category, pattern] of Object.entries(CATEGORY_PATTERNS)) {
       if (pattern.test(text) && category !== 'all') {
         entities.category = category
@@ -73,7 +72,7 @@ export class IntentDetector {
       }
     }
 
-    // Brand detection
+    
     for (const [brand, pattern] of Object.entries(BRAND_PATTERNS)) {
       if (pattern.test(text)) {
         entities.brand = brand
@@ -81,14 +80,14 @@ export class IntentDetector {
       }
     }
 
-    // Price range detection
+    
     const priceRange = this.extractPriceRange(text)
     if (priceRange) {
       entities.priceRange = priceRange
       confidence += 0.15
     }
 
-    // Feature detection
+    
     const features: string[] = []
     for (const [featureType, pattern] of Object.entries(FEATURE_PATTERNS)) {
       const match = text.match(pattern)
@@ -101,7 +100,7 @@ export class IntentDetector {
       confidence += 0.05 * features.length
     }
 
-    // Extract parameters
+    
     const parameters: Intent['parameters'] = {}
     const numbers = TextTokenizer.extractNumbers(text)
     
@@ -121,14 +120,14 @@ export class IntentDetector {
       parameters.sortOrder = 'desc'
     }
 
-    // Apply context from conversation history
+    
     if (context?.previousIntent) {
-      // Carry over entities from previous intent if relevant
+      
       if (detectedIntent === 'show_products' && context.previousIntent.entities.category) {
         entities.category = context.previousIntent.entities.category
       }
       
-      // Increase confidence for follow-up questions
+      
       if (context.conversationHistory.length > 0) {
         confidence = Math.min(confidence + 0.1, 1.0)
       }
@@ -145,21 +144,21 @@ export class IntentDetector {
   private static extractPriceRange(text: string): { min?: number; max?: number } | null {
     const priceRange: { min?: number; max?: number } = {}
     
-    // Check for "under" patterns
+    
     const underMatch = text.match(PRICE_PATTERNS.under)
     if (underMatch) {
       priceRange.max = parseInt(underMatch[2])
       return priceRange
     }
 
-    // Check for "above" patterns
+    
     const aboveMatch = text.match(PRICE_PATTERNS.above)
     if (aboveMatch) {
       priceRange.min = parseInt(aboveMatch[2])
       return priceRange
     }
 
-    // Check for "between" patterns
+    
     const betweenMatch = text.match(PRICE_PATTERNS.between)
     if (betweenMatch) {
       priceRange.min = parseInt(betweenMatch[2])
@@ -167,7 +166,7 @@ export class IntentDetector {
       return priceRange
     }
 
-    // Check for exact price
+    
     const exactMatch = text.match(PRICE_PATTERNS.exact)
     if (exactMatch) {
       const price = parseInt(exactMatch[2])
@@ -176,7 +175,7 @@ export class IntentDetector {
       return priceRange
     }
 
-    // Look for simple number patterns with price context
+    
     if (text.includes('₹') || text.includes('$') || text.includes('rupee') || text.includes('price')) {
       const numbers = TextTokenizer.extractNumbers(text)
       if (numbers.length === 1) {
