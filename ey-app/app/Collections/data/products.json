@@ -31,6 +31,106 @@
   },
   {
     "id": 4,
+    "name": "BLACK HOODIE",
+    "price": 155,
+    "image": "https://i.pinimg.com/1200x/9e/fa/1c/9efa1c43d720d4f4a1aef2f775570b3b.jpg",
+    "rating": 4.2,
+    "category": "Hoodie",
+    "brand": "Uniqlo",
+    "description": "Classic black hoodie with comfortable cotton blend, ideal for casual wear."
+  },
+  {
+    "id": 5,
+    "name": "ARM GLOVES",
+    "price": 250,
+    "image": "https://i.pinimg.com/1200x/21/bd/3a/21bd3ac4024631f48b915faf8692a085.jpg",
+    "rating": 4.5,
+    "category": "Gloves",
+    "brand": "Zara",
+    "description": "Stylish arm gloves with unique design, perfect for completing your fashion look."
+  },
+  {
+    "id": 6,
+    "name": "BLACK HOODIE",
+    "price": 155,
+    "image": "https://i.pinimg.com/1200x/9e/fa/1c/9efa1c43d720d4f4a1aef2f775570b3b.jpg",
+    "rating": 4.2,
+    "category": "Hoodie",
+    "brand": "Uniqlo",
+    "description": "Classic black hoodie with comfortable cotton blend, ideal for casual wear."
+  },
+  {
+    "id": 7,
+    "name": "ARM GLOVES",
+    "price": 250,
+    "image": "https://i.pinimg.com/1200x/21/bd/3a/21bd3ac4024631f48b915faf8692a085.jpg",
+    "rating": 4.5,
+    "category": "Gloves",
+    "brand": "Zara",
+    "description": "Stylish arm gloves with unique design, perfect for completing your fashion look."
+  },
+  {
+    "id": 8,
+    "name": "BLACK HOODIE",
+    "price": 155,
+    "image": "https://i.pinimg.com/1200x/9e/fa/1c/9efa1c43d720d4f4a1aef2f775570b3b.jpg",
+    "rating": 4.2,
+    "category": "Hoodie",
+    "brand": "Uniqlo",
+    "description": "Classic black hoodie with comfortable cotton blend, ideal for casual wear."
+  },
+  {
+    "id": 9,
+    "name": "ARM GLOVES",
+    "price": 250,
+    "image": "https://i.pinimg.com/1200x/21/bd/3a/21bd3ac4024631f48b915faf8692a085.jpg",
+    "rating": 4.5,
+    "category": "Gloves",
+    "brand": "Zara",
+    "description": "Stylish arm gloves with unique design, perfect for completing your fashion look."
+  },
+  {
+    "id": 10,
+    "name": "BLACK HOODIE",
+    "price": 155,
+    "image": "https://i.pinimg.com/1200x/9e/fa/1c/9efa1c43d720d4f4a1aef2f775570b3b.jpg",
+    "rating": 4.2,
+    "category": "Hoodie",
+    "brand": "Uniqlo",
+    "description": "Classic black hoodie with comfortable cotton blend, ideal for casual wear."
+  },
+  {
+    "id": 11,
+    "name": "ARM GLOVES",
+    "price": 250,
+    "image": "https://i.pinimg.com/1200x/21/bd/3a/21bd3ac4024631f48b915faf8692a085.jpg",
+    "rating": 4.5,
+    "category": "Gloves",
+    "brand": "Zara",
+    "description": "Stylish arm gloves with unique design, perfect for completing your fashion look."
+  },
+  {
+    "id": 12,
+    "name": "BLACK HOODIE",
+    "price": 155,
+    "image": "https://i.pinimg.com/1200x/9e/fa/1c/9efa1c43d720d4f4a1aef2f775570b3b.jpg",
+    "rating": 4.2,
+    "category": "Hoodie",
+    "brand": "Uniqlo",
+    "description": "Classic black hoodie with comfortable cotton blend, ideal for casual wear."
+  },
+  {
+    "id": 13,
+    "name": "ARM GLOVES",
+    "price": 250,
+    "image": "https://i.pinimg.com/1200x/21/bd/3a/21bd3ac4024631f48b915faf8692a085.jpg",
+    "rating": 4.5,
+    "category": "Gloves",
+    "brand": "Zara",
+    "description": "Stylish arm gloves with unique design, perfect for completing your fashion look."
+  },
+  {
+    "id": 14,
     "name": "TRACK PANTS",
     "price": 150,
     "image": "https://i.pinimg.com/736x/42/9c/e8/429ce897ccbaa3efc122d47ab18eebe5.jpg",
