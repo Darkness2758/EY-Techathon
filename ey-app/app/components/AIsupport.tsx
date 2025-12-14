@@ -1,10 +1,12 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { MessageCircle, X, Send, Bot, User, Mic, Square, Maximize2, Minimize2, ShoppingBag, ExternalLink } from "lucide-react"
+import { MessageCircle, X, Send, Bot, User, Mic, Square, Maximize2, Minimize2, ShoppingBag, ExternalLink, Star, Filter, TrendingUp } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Product } from "../types/products"
 import { generateAIResponse } from "../lib/product"
+import { IntentDetector, ResponseGenerator } from "../lib/nlp"
+import type { NLPResponse, QueryContext, Intent } from "../lib/nlp/types"
 
 type Message = {
   id: number
@@ -12,7 +14,8 @@ type Message = {
   sender: "user" | "ai"
   timestamp: Date
   relatedProducts?: Product[]
-  action?: 'show_products' | 'show_categories' | 'show_recommendations'
+  action?: Intent['type']
+  intentData?: NLPResponse
 }
 
 export default function AISupport() {
@@ -30,8 +33,47 @@ export default function AISupport() {
   const [isListening, setIsListening] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [conversationContext, setConversationContext] = useState<QueryContext>({
+    conversationHistory: [],
+    userPreferences: {
+      preferredCategories: [],
+      priceRange: { min: 0, max: 1000 },
+      favoriteBrands: []
+    }
+  })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const recognitionRef = useRef<any>(null)
+
+  // Initialize speech recognition if available
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition()
+        recognitionRef.current.continuous = false
+        recognitionRef.current.interimResults = false
+        recognitionRef.current.lang = 'en-US'
+        
+        recognitionRef.current.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript
+          setInput(transcript)
+          if (inputRef.current) {
+            inputRef.current.focus()
+          }
+        }
+        
+        recognitionRef.current.onend = () => {
+          setIsListening(false)
+        }
+        
+        recognitionRef.current.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error)
+          setIsListening(false)
+        }
+      }
+    }
+  }, [])
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -67,12 +109,43 @@ export default function AISupport() {
       timestamp: new Date(),
     }
     setMessages(prev => [...prev, userMessage])
+    const userInput = input
     setInput("")
     setIsTyping(true)
 
     try {
-      // Get AI response
-      const aiResponse = await generateAIResponse(input)
+      // Use NLP to detect intent
+      const nlpResponse = IntentDetector.detectIntent(userInput, conversationContext)
+      
+      // Update conversation context
+      setConversationContext(prev => ({
+        ...prev,
+        previousIntent: nlpResponse.intent,
+        conversationHistory: [...prev.conversationHistory, userInput],
+        // Update user preferences based on detected entities
+        userPreferences: {
+          ...prev.userPreferences,
+          ...(nlpResponse.intent.entities.category && {
+            preferredCategories: Array.from(
+              new Set([...(prev.userPreferences?.preferredCategories || []), nlpResponse.intent.entities.category!])
+            )
+          }),
+          ...(nlpResponse.intent.entities.brand && {
+            favoriteBrands: Array.from(
+              new Set([...(prev.userPreferences?.favoriteBrands || []), nlpResponse.intent.entities.brand!])
+            )
+          }),
+          ...(nlpResponse.intent.entities.priceRange && {
+            priceRange: {
+              min: nlpResponse.intent.entities.priceRange.min || prev.userPreferences?.priceRange?.min || 0,
+              max: nlpResponse.intent.entities.priceRange.max || prev.userPreferences?.priceRange?.max || 1000
+            }
+          })
+        }
+      }))
+
+      // Get AI response with NLP context
+      const aiResponse = await generateAIResponse(userInput, nlpResponse)
       
       const aiMessage: Message = {
         id: messages.length + 2,
@@ -80,7 +153,8 @@ export default function AISupport() {
         sender: "ai",
         timestamp: new Date(),
         relatedProducts: aiResponse.relatedProducts,
-        action: aiResponse.action
+        action: aiResponse.action,
+        intentData: nlpResponse
       }
       
       setMessages(prev => [...prev, aiMessage])
@@ -88,7 +162,7 @@ export default function AISupport() {
       console.error("Error getting AI response:", error)
       const errorMessage: Message = {
         id: messages.length + 2,
-        text: "I apologize, but I'm having trouble accessing the product data. Please try again in a moment.",
+        text: "I apologize, but I'm having trouble processing your request. Please try again in a moment.",
         sender: "ai",
         timestamp: new Date(),
       }
@@ -101,15 +175,31 @@ export default function AISupport() {
   const toggleVoiceInput = () => {
     if (isListening) {
       setIsListening(false)
+      if (recognitionRef.current) {
+        recognitionRef.current.stop()
+      }
     } else {
-      setIsListening(true)
-      setTimeout(() => {
-        setIsListening(false)
-        setInput("Show me jackets under ₹400")
-        if (inputRef.current) {
-          inputRef.current.focus()
-        }
-      }, 2000)
+      if (recognitionRef.current) {
+        recognitionRef.current.start()
+        setIsListening(true)
+      } else {
+        // Fallback to simulated voice input
+        setIsListening(true)
+        setTimeout(() => {
+          setIsListening(false)
+          const demoCommands = [
+            "Show me jackets under ₹400",
+            "What are the best hoodies?",
+            "Recommend trending products",
+            "Show me Wink brand items"
+          ]
+          const randomCommand = demoCommands[Math.floor(Math.random() * demoCommands.length)]
+          setInput(randomCommand)
+          if (inputRef.current) {
+            inputRef.current.focus()
+          }
+        }, 2000)
+      }
     }
   }
 
@@ -124,11 +214,19 @@ export default function AISupport() {
     setMessages([
       {
         id: 1,
-        text: "Hello! I'm your AI fashion assistant. How can I help you today?",
+        text: "Hello! I'm your AI fashion assistant. I have access to all products. How can I help you today?",
         sender: "ai",
         timestamp: new Date(),
       },
     ])
+    setConversationContext({
+      conversationHistory: [],
+      userPreferences: {
+        preferredCategories: [],
+        priceRange: { min: 0, max: 1000 },
+        favoriteBrands: []
+      }
+    })
     setSelectedProduct(null)
   }
 
@@ -148,18 +246,77 @@ export default function AISupport() {
     setIsFullscreen(!isFullscreen)
   }
 
-  // Suggested prompts
-  const suggestedPrompts = [
-    "Show me jackets",
-    "Products under ₹300",
-    "Recommendations",
-    "Wink brand products",
-  ]
-
-  const handleQuickPrompt = (prompt: string) => {
+  const handleQuickPrompt = async (prompt: string) => {
     setInput(prompt)
     if (inputRef.current) {
       inputRef.current.focus()
+    }
+    
+    // Auto-send after a short delay
+    setTimeout(() => {
+      if (inputRef.current && document.activeElement === inputRef.current) {
+        handleSend()
+      }
+    }, 100)
+  }
+
+  // Get suggested prompts based on conversation context
+  const getSuggestedPrompts = () => {
+    const basePrompts = [
+      "Show me jackets",
+      "Products under ₹300",
+      "Recommendations",
+      "Wink brand products",
+    ]
+    
+    if (conversationContext.userPreferences?.preferredCategories?.length) {
+      const lastCategory = conversationContext.userPreferences.preferredCategories.slice(-1)[0]
+      return [
+        `More ${lastCategory}`,
+        `${lastCategory} under ₹500`,
+        `Best rated ${lastCategory}`,
+        "Show all categories"
+      ]
+    }
+    
+    if (conversationContext.previousIntent?.entities?.priceRange) {
+      const { min, max } = conversationContext.previousIntent.entities.priceRange
+      if (max) {
+        return [
+          `Products under ₹${max}`,
+          `Show me cheaper options`,
+          `Best value under ₹${max}`,
+          "Clear price filter"
+        ]
+      }
+    }
+    
+    return basePrompts
+  }
+
+  const getIntentIcon = (intentType?: string) => {
+    switch (intentType) {
+      case 'show_recommendations':
+        return <TrendingUp className="w-3 h-3 text-purple-400" />
+      case 'price_query':
+        return <Filter className="w-3 h-3 text-green-400" />
+      case 'comparison':
+        return <Star className="w-3 h-3 text-yellow-400" />
+      default:
+        return <Bot className="w-3 h-3 text-yellow-300" />
+    }
+  }
+
+  const getIntentColor = (intentType?: string) => {
+    switch (intentType) {
+      case 'show_recommendations':
+        return 'border-purple-500/20 bg-purple-500/5'
+      case 'price_query':
+        return 'border-green-500/20 bg-green-500/5'
+      case 'comparison':
+        return 'border-yellow-500/20 bg-yellow-500/5'
+      default:
+        return 'border-yellow-300/20 bg-yellow-500/5'
     }
   }
 
@@ -172,11 +329,11 @@ export default function AISupport() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full bg-linear-to-br from-yellow-400 to-yellow-600 shadow-2xl border-2 border-yellow-300 flex items-center justify-center group"
+        className="fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full bg-linear-to-br from-purple-600 via-yellow-500 to-pink-600 shadow-2xl border-2 border-yellow-300 flex items-center justify-center group"
       >
         <div className="relative">
-          <Bot className="w-7 h-7 text-black" />
-          <div className="absolute -top-2 -right-2 w-4 h-4 bg-green-400 rounded-full border-2 border-black">
+          <Bot className="w-7 h-7 text-white" />
+          <div className="absolute -top-2 -right-2 w-4 h-4 bg-green-400 rounded-full border-2 border-white">
             <div className="absolute inset-0 bg-green-400 rounded-full animate-ping"></div>
           </div>
         </div>
@@ -195,7 +352,7 @@ export default function AISupport() {
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             className={`fixed z-50 bg-neutral-900 border border-yellow-300/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col
               ${isFullscreen 
-                ? "ins-0 m-4 rounded-2xl" 
+                ? "inset-0 m-4 rounded-2xl" 
                 : "bottom-24 right-8 w-96 h-[600px]"
               }`}
             style={isFullscreen ? {
@@ -209,15 +366,27 @@ export default function AISupport() {
           >
             <div className="p-5 bg-linear-to-r from-neutral-800 to-neutral-900 border-b border-yellow-300/20 flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-linear-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
-                  <Bot className="w-6 h-6 text-black" />
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-600 to-yellow-500 flex items-center justify-center">
+                  <Bot className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <h3 className="font-bold text-yellow-300">NebulaAI</h3>
-                  <p className="text-xs text-gray-400">Always There For You</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">Fashion Assistant</span>
+                    {conversationContext.conversationHistory.length > 0 && (
+                      <span className="text-xs text-purple-400">
+                        Context: {conversationContext.conversationHistory.length}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {conversationContext.previousIntent && (
+                  <div className="text-xs px-2 py-1 rounded-full bg-black/50 border border-white/10">
+                    {conversationContext.previousIntent.type.replace('_', ' ')}
+                  </div>
+                )}
                 <button
                   onClick={toggleFullscreen}
                   className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -247,44 +416,72 @@ export default function AISupport() {
                     className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl p-4 ${message.sender === "user" ? "bg-yellow-500/10 border border-yellow-300/30" : "bg-neutral-800/50 border border-neutral-700"}`}
+                      className={`max-w-[80%] rounded-2xl p-4 ${message.sender === "user" 
+                        ? "bg-linear-to-r from-blue-900/30 to-blue-800/20 border border-blue-500/30" 
+                        : `${getIntentColor(message.intentData?.intent.type)} border`}`}
                     >
                       <div className="flex items-center gap-2 mb-2">
                         {message.sender === "ai" ? (
-                          <Bot className="w-4 h-4 text-yellow-300" />
+                          getIntentIcon(message.intentData?.intent.type)
                         ) : (
-                          <User className="w-4 h-4 text-yellow-300" />
+                          <User className="w-4 h-4 text-blue-400" />
                         )}
                         <span className="text-xs font-medium text-yellow-300">
                           {message.sender === "ai" ? "AI Assistant" : "You"}
                         </span>
+                        {message.intentData && (
+                          <span className="text-xs px-1.5 py-0.5 rounded-full bg-black/50 border border-white/10">
+                            {message.intentData.intent.type.replace('_', ' ')}
+                          </span>
+                        )}
                         <span className="text-xs text-gray-500 ml-auto">
                           {formatTime(message.timestamp)}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-200 mb-3">{message.text}</p>
+                      <p className="text-sm text-gray-200 mb-3 whitespace-pre-line">{message.text}</p>
+                      
+                      {message.intentData && message.intentData.intent.confidence < 0.7 && (
+                        <div className="text-xs text-gray-500 mb-2">
+                          Confidence: {(message.intentData.intent.confidence * 100).toFixed(0)}%
+                        </div>
+                      )}
 
                       {message.sender === "ai" && message.relatedProducts && message.relatedProducts.length > 0 && (
                         <div className="mt-3 border-t border-white/10 pt-3">
                           <div className="flex items-center gap-2 mb-2">
                             <ShoppingBag className="w-4 h-4 text-yellow-300" />
                             <span className="text-xs font-medium text-yellow-300">
-                              {message.action === 'show_recommendations' ? 'Top Recommendations' : 'Related Products'}
+                              {message.action === 'show_recommendations' ? 'Top Recommendations' : 
+                               message.action === 'price_query' ? 'Price Matches' :
+                               message.action === 'comparison' ? 'Comparison Products' :
+                               'Related Products'}
+                            </span>
+                            <span className="text-xs text-gray-400 ml-auto">
+                              {message.relatedProducts.length} products
                             </span>
                           </div>
                           <div className="grid grid-cols-1 gap-2">
                             {message.relatedProducts.slice(0, 3).map((product) => (
-                              <div
+                              <motion.div
                                 key={product.id}
-                                className="bg-black/30 border border-white/10 rounded-lg p-3 hover:border-yellow-300/30 transition-colors cursor-pointer"
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="bg-black/30 border border-white/10 rounded-lg p-3 hover:border-yellow-300/30 transition-all cursor-pointer hover:scale-[1.02]"
                                 onClick={() => viewProductDetails(product)}
                               >
                                 <div className="flex items-center gap-3">
-                                  <img
-                                    src={product.image}
-                                    alt={product.name}
-                                    className="w-12 h-12 object-cover rounded"
-                                  />
+                                  <div className="relative">
+                                    <img
+                                      src={product.image}
+                                      alt={product.name}
+                                      className="w-12 h-12 object-cover rounded"
+                                    />
+                                    {product.rating >= 4.5 && (
+                                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                                        <Star className="w-2 h-2 text-black" />
+                                      </div>
+                                    )}
+                                  </div>
                                   <div className="flex-1">
                                     <div className="flex justify-between items-start">
                                       <div>
@@ -303,10 +500,15 @@ export default function AISupport() {
                                         ))}
                                       </div>
                                       <span className="text-xs text-gray-400 ml-1">{product.rating}</span>
+                                      {message.intentData?.intent.entities.priceRange && (
+                                        <span className={`text-xs ml-2 px-1 rounded ${product.price <= (message.intentData.intent.entities.priceRange.max || Infinity) ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
+                                          {product.price <= (message.intentData.intent.entities.priceRange.max || Infinity) ? 'In budget' : 'Over budget'}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
-                              </div>
+                              </motion.div>
                             ))}
                           </div>
                           {message.relatedProducts.length > 3 && (
@@ -327,6 +529,7 @@ export default function AISupport() {
                     <div className="flex items-center gap-2 mb-2">
                       <Bot className="w-4 h-4 text-yellow-300" />
                       <span className="text-xs font-medium text-yellow-300">AI Assistant</span>
+                      <span className="text-xs text-gray-500">Analyzing with NLP...</span>
                     </div>
                     <div className="flex gap-1">
                       <div className="w-2 h-2 bg-yellow-300 rounded-full animate-bounce"></div>
@@ -340,7 +543,7 @@ export default function AISupport() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Product Details Wait I will change this */}
+            {/* Product Details Modal */}
             <AnimatePresence>
               {selectedProduct && (
                 <motion.div
@@ -421,6 +624,21 @@ export default function AISupport() {
                             <div className="text-white">{selectedProduct.rating}/5</div>
                           </div>
                         </div>
+                        
+                        <div className="pt-4 border-t border-white/10">
+                          <button
+                            onClick={() => {
+                              closeProductDetails()
+                              setInput(`Tell me more about ${selectedProduct.name}`)
+                              if (inputRef.current) {
+                                inputRef.current.focus()
+                              }
+                            }}
+                            className="w-full py-2 border border-yellow-300/30 text-yellow-300 rounded-lg hover:bg-yellow-300/10 transition-colors"
+                          >
+                            Ask AI about this product
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </motion.div>
@@ -428,25 +646,35 @@ export default function AISupport() {
               )}
             </AnimatePresence>
 
-            {!isFullscreen && messages.length <= 3 && (
+            {/* Suggested Prompts */}
+            {!isFullscreen && messages.length <= 4 && (
               <div className="px-4 pb-3">
                 <p className="text-xs text-gray-400 mb-2">Try asking:</p>
                 <div className="flex flex-wrap gap-2">
-                  {suggestedPrompts.map((prompt, index) => (
-                    <button
+                  {getSuggestedPrompts().map((prompt, index) => (
+                    <motion.button
                       key={index}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.1 }}
                       onClick={() => handleQuickPrompt(prompt)}
-                      className="px-3 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-white/10 rounded-lg transition-colors"
+                      className="px-3 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-white/10 rounded-lg transition-all hover:scale-105 active:scale-95"
                     >
                       {prompt}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Input Area */}
             <div className="p-4 border-t border-neutral-800 bg-neutral-900 space-y-3">
               {isListening && (
-                <div className="flex items-center justify-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center justify-center gap-2 p-3 bg-linear-to-r from-red-500/10 to-purple-500/10 border border-red-500/30 rounded-lg"
+                >
                   <div className="relative">
                     <div className="w-4 h-4 bg-red-500 rounded-full animate-ping"></div>
                     <Mic className="w-5 h-5 text-red-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
@@ -458,7 +686,7 @@ export default function AISupport() {
                   >
                     <Square className="w-4 h-4 text-red-500" />
                   </button>
-                </div>
+                </motion.div>
               )}
 
               <div className="flex gap-2">
@@ -475,27 +703,43 @@ export default function AISupport() {
                   <button
                     onClick={toggleVoiceInput}
                     className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 ${isListening ? "text-red-400" : "text-gray-400 hover:text-yellow-300"}`}
+                    title="Voice input"
                   >
                     <Mic className="w-5 h-5" />
                   </button>
                 </div>
-                <button
+                <motion.button
                   onClick={handleSend}
                   disabled={!input.trim()}
+                  whileHover={input.trim() ? { scale: 1.05 } : {}}
+                  whileTap={input.trim() ? { scale: 0.95 } : {}}
                   className="px-5 bg-linear-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-neutral-700 disabled:to-neutral-800 disabled:cursor-not-allowed rounded-xl flex items-center justify-center transition-all"
                 >
                   <Send className="w-5 h-5 text-black" />
-                </button>
+                </motion.button>
               </div>
 
               <div className="flex justify-between text-xs text-gray-500">
                 <div className="flex items-center gap-4">
                   <button
                     onClick={clearChat}
-                    className="hover:text-yellow-300 transition-colors"
+                    className="hover:text-yellow-300 transition-colors flex items-center gap-1"
                   >
-                    Clear chat
+                    <X className="w-3 h-3" /> Clear chat
                   </button>
+                  {conversationContext.conversationHistory.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setInput(`Based on my previous questions: ${conversationContext.conversationHistory.slice(-2).join(', ')}`);
+                        if (inputRef.current) {
+                          inputRef.current.focus();
+                        }
+                      }}
+                      className="hover:text-yellow-300 transition-colors"
+                    >
+                      Use context
+                    </button>
+                  )}
                   {isFullscreen && (
                     <button
                       onClick={toggleFullscreen}
@@ -508,7 +752,7 @@ export default function AISupport() {
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    Connected to Products
+                    NLP Ready
                   </span>
                   <span>Press Enter to send</span>
                 </div>
