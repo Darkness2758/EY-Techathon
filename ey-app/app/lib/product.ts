@@ -1,6 +1,7 @@
 import { Product } from "../types/products"
 import productsData from "../Collections/data/products.json"
 import { IntentDetector, ResponseGenerator } from "./nlp"
+import { ProductRanker } from "./ranking"
 import type { NLPResponse, Intent } from "./nlp/types"
 
 export async function getProducts(): Promise<Product[]> {
@@ -34,7 +35,8 @@ export async function searchProducts(query: string): Promise<Product[]> {
 
 export async function getRecommendations(
   limit: number = 3,
-  intent?: Intent
+  intent?: Intent,
+  userPreferences?: any
 ): Promise<Product[]> {
   const products = productsData as Product[]
   
@@ -61,6 +63,28 @@ export async function getRecommendations(
     if (intent.entities.brand) {
       filteredProducts = filteredProducts.filter(p => 
         p.brand.toLowerCase().includes(intent.entities.brand!.toLowerCase())
+      )
+    }
+  }
+  
+  // Apply user preferences
+  if (userPreferences) {
+    if (userPreferences.preferredCategories?.length > 0) {
+      filteredProducts = filteredProducts.filter(p => 
+        userPreferences.preferredCategories.includes(p.category)
+      )
+    }
+    
+    if (userPreferences.favoriteBrands?.length > 0) {
+      filteredProducts = filteredProducts.filter(p => 
+        userPreferences.favoriteBrands.includes(p.brand)
+      )
+    }
+    
+    if (userPreferences.priceRange) {
+      const { min, max } = userPreferences.priceRange
+      filteredProducts = filteredProducts.filter(p => 
+        p.price >= min && p.price <= max
       )
     }
   }
@@ -136,6 +160,99 @@ export async function getProductsByFeatures(features: string[]): Promise<Product
   })
 }
 
+export async function getTrendingProducts(limit: number = 5): Promise<Product[]> {
+  const products = productsData as Product[]
+  
+  // Simulate trending based on rating and recency (higher id = newer)
+  return products
+    .sort((a, b) => {
+      // Weight rating higher than recency
+      const scoreA = (a.rating * 0.7) + (a.id / 1000 * 0.3)
+      const scoreB = (b.rating * 0.7) + (b.id / 1000 * 0.3)
+      return scoreB - scoreA
+    })
+    .slice(0, limit)
+}
+
+export async function getNewArrivals(limit: number = 5): Promise<Product[]> {
+  const products = productsData as Product[]
+  
+  // Assuming higher ID = newer product
+  return products
+    .sort((a, b) => b.id - a.id)
+    .slice(0, limit)
+}
+
+export async function getPersonalizedRecommendations(
+  userPreferences: any,
+  limit: number = 5
+): Promise<Product[]> {
+  const products = productsData as Product[]
+  
+  let filteredProducts = [...products]
+  
+  // Apply user preferences
+  if (userPreferences.preferredCategories?.length > 0) {
+    filteredProducts = filteredProducts.filter(p => 
+      userPreferences.preferredCategories.includes(p.category)
+    )
+  }
+  
+  if (userPreferences.favoriteBrands?.length > 0) {
+    filteredProducts = filteredProducts.filter(p => 
+      userPreferences.favoriteBrands.includes(p.brand)
+    )
+  }
+  
+  if (userPreferences.priceRange) {
+    const { min, max } = userPreferences.priceRange
+    filteredProducts = filteredProducts.filter(p => 
+      p.price >= min && p.price <= max
+    )
+  }
+  
+  // Consider seasonal relevance
+  const currentSeason = getCurrentSeason()
+  const seasonalMultiplier = getSeasonalMultiplierForProducts(filteredProducts, currentSeason)
+  
+  // Sort by combined score (rating + seasonal relevance)
+  return filteredProducts
+    .map(product => {
+      const seasonalBoost = seasonalMultiplier[product.category] || 1
+      const score = product.rating * seasonalBoost
+      return { product, score }
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ product }) => product)
+}
+
+function getCurrentSeason(): string {
+  const month = new Date().getMonth()
+  if (month >= 11 || month <= 1) return 'Winter'
+  if (month >= 2 && month <= 4) return 'Spring'
+  if (month >= 5 && month <= 7) return 'Summer'
+  return 'Autumn'
+}
+
+function getSeasonalMultiplierForProducts(products: Product[], season: string): Record<string, number> {
+  const seasonalMultipliers: Record<string, Record<string, number>> = {
+    Winter: { 'Jacket': 1.8, 'Gloves': 1.6, 'Hoodie': 1.4, 'Pants': 1.2 },
+    Summer: { 'Jacket': 0.6, 'Gloves': 0.4, 'Hoodie': 0.7, 'Pants': 1.4 },
+    Spring: { 'Jacket': 1.2, 'Gloves': 0.8, 'Hoodie': 1.3, 'Pants': 1.5 },
+    Autumn: { 'Jacket': 1.5, 'Gloves': 1.2, 'Hoodie': 1.6, 'Pants': 1.3 }
+  }
+  
+  const multipliers = seasonalMultipliers[season] || {}
+  const result: Record<string, number> = {}
+  
+  products.forEach(product => {
+    result[product.category] = multipliers[product.category] || 1.0
+  })
+  
+  return result
+}
+
 export async function generateAIResponse(
   userMessage: string, 
   nlpResponse?: NLPResponse
@@ -151,41 +268,74 @@ export async function generateAIResponse(
   const allProducts = await getProducts()
   let filteredProducts: Product[] = []
   
-  // Apply filters based on NLP intent
+  // Generate conversational responses based on intent
+  let responseText = ""
+  
   switch (nlp.intent.type) {
     case 'show_products':
-    case 'show_recommendations':
-    case 'price_query':
-    case 'brand_query':
-    case 'filter_query':
       filteredProducts = await filterProductsByIntent(nlp.intent, allProducts)
+      if (filteredProducts.length > 0) {
+        responseText = `I found ${filteredProducts.length} products matching your search. Here are the best matches:`
+      } else {
+        responseText = "I couldn't find any products matching your criteria. Would you like to try a different search?"
+      }
+      break
+      
+    case 'show_recommendations':
+      filteredProducts = await getPersonalizedRecommendations(
+        nlp.intent.entities,
+        nlp.intent.parameters.limit || 5
+      )
+      responseText = "Based on your preferences, here are my top recommendations:"
       break
       
     case 'show_categories':
-      // For category listing, return all products but indicate it's a category query
-      filteredProducts = allProducts
+      const categories = getUniqueCategories(allProducts)
+      responseText = `We have products in these categories: ${categories.join(', ')}. Which category interests you?`
+      filteredProducts = allProducts.slice(0, 3) // Show a few sample products
+      break
+      
+    case 'price_query':
+      filteredProducts = await getProductsByPriceRange(
+        nlp.intent.entities.priceRange?.min,
+        nlp.intent.entities.priceRange?.max
+      )
+      if (filteredProducts.length > 0) {
+        const priceRange = nlp.intent.entities.priceRange
+        const rangeText = priceRange?.max ? `under ₹${priceRange.max}` : 
+                         priceRange?.min ? `above ₹${priceRange.min}` : 
+                         'in your price range'
+        responseText = `I found ${filteredProducts.length} products ${rangeText}. Here are the best options:`
+      } else {
+        responseText = "No products found in that price range. Would you like to adjust your budget?"
+      }
+      break
+      
+    case 'brand_query':
+      filteredProducts = await getProductsByBrand(nlp.intent.entities.brand || '')
+      if (filteredProducts.length > 0) {
+        responseText = `Here are ${filteredProducts.length} products from ${nlp.intent.entities.brand}:`
+      } else {
+        responseText = `We don't have products from ${nlp.intent.entities.brand} currently. Would you like to see products from other brands?`
+      }
       break
       
     case 'comparison':
-      // For comparison, return products that might be compared
-      if (nlp.intent.entities.comparisonTargets) {
-        const targets = nlp.intent.entities.comparisonTargets
-        filteredProducts = allProducts.filter(p => 
-          targets.some(target => 
-            p.name.toLowerCase().includes(target.toLowerCase()) ||
-            p.category.toLowerCase().includes(target.toLowerCase()) ||
-            p.brand.toLowerCase().includes(target.toLowerCase())
-          )
-        )
+      // For comparison, show top-rated products in the category
+      if (nlp.intent.entities.category) {
+        filteredProducts = await getProductsByCategory(nlp.intent.entities.category)
+        filteredProducts = filteredProducts.sort((a, b) => b.rating - a.rating).slice(0, 3)
+        responseText = `Here are the top-rated ${nlp.intent.entities.category}s for comparison:`
       } else {
-        // If no specific comparison targets, return top-rated products
-        filteredProducts = await getRecommendations(4, nlp.intent)
+        filteredProducts = await getRecommendations(3, nlp.intent)
+        responseText = "Here are some products you might want to compare:"
       }
       break
       
     case 'general_help':
-      // Return empty for help queries
-      filteredProducts = []
+      const trending = await getTrendingProducts(2)
+      filteredProducts = trending
+      responseText = `I'm here to help! I can assist you with finding products, recommendations, price comparisons, and more. Here's what's trending right now:`
       break
   }
   
@@ -218,7 +368,7 @@ export async function generateAIResponse(
   const generatedResponse = ResponseGenerator.generateResponse(nlp.intent, filteredProducts)
   
   // Enhance response with specific details
-  let enhancedResponse = generatedResponse.text
+  let enhancedResponse = responseText || generatedResponse.text
   
   if (filteredProducts.length > 0) {
     // Add price range information
@@ -241,9 +391,11 @@ export async function generateAIResponse(
     }
   }
   
-  // Add follow-up suggestions
-  if (nlp.suggestions && nlp.suggestions.length > 0 && filteredProducts.length > 0) {
-    enhancedResponse += `\n\n💡 You can also ask: "${nlp.suggestions[0]}"`
+  // Add conversational elements
+  if (filteredProducts.length > 0) {
+    enhancedResponse += `\n\n💭 Need help choosing? Feel free to ask me anything about these products!`
+  } else {
+    enhancedResponse += `\n\n💡 Try asking about a different category, brand, or price range. I'm here to help you find what you're looking for!`
   }
   
   return {
@@ -309,23 +461,6 @@ async function filterProductsByIntent(intent: Intent, products: Product[]): Prom
   }
   
   return filteredProducts
-}
-
-// Helper function for legacy compatibility
-export async function generateLegacyAIResponse(userMessage: string): Promise<{
-  response: string
-  relatedProducts?: Product[]
-  action?: 'show_products' | 'show_categories' | 'show_recommendations'
-}> {
-  const nlpResponse = IntentDetector.detectIntent(userMessage)
-  const result = await generateAIResponse(userMessage, nlpResponse)
-  
-  // Convert to legacy format
-  return {
-    response: result.response,
-    relatedProducts: result.relatedProducts,
-    action: result.action as any // Type conversion for legacy compatibility
-  }
 }
 
 // Export NLP functions for direct use if needed

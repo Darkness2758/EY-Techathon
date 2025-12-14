@@ -62,7 +62,6 @@ What would you like to do?`
         break
     }
 
-    // Add contextual suggestions
     if (intent.entities.category) {
       suggestions.unshift(`More ${intent.entities.category}`)
     }
@@ -118,8 +117,7 @@ What would you like to do?`
 
   private static generateRecommendationResponse(intent: Intent, products: Product[]): string {
     const { sortBy = 'rating', sortOrder = 'desc', limit = 3 } = intent.parameters
-    
-    // Sort products based on parameters
+
     const sortedProducts = [...products].sort((a, b) => {
       if (sortBy === 'rating') {
         return sortOrder === 'desc' ? b.rating - a.rating : a.rating - b.rating
