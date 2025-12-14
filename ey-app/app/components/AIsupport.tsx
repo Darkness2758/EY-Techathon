@@ -301,9 +301,9 @@ export default function AISupport() {
       case 'price_query':
         return <Filter className="w-3 h-3 text-green-400" />
       case 'comparison':
-        return <Star className="w-3 h-3 text-yellow-400" />
+        return <Star className="w-3 h-3 text-blue-400" />
       default:
-        return <Bot className="w-3 h-3 text-yellow-300" />
+        return <Bot className="w-3 h-3 text-blue-300" />
     }
   }
 
@@ -314,9 +314,9 @@ export default function AISupport() {
       case 'price_query':
         return 'border-green-500/20 bg-green-500/5'
       case 'comparison':
-        return 'border-yellow-500/20 bg-yellow-500/5'
+        return 'border-blue-500/20 bg-blue-500/5'
       default:
-        return 'border-yellow-300/20 bg-yellow-500/5'
+        return 'border-blue-300/20 bg-blue-500/5'
     }
   }
 
@@ -329,7 +329,7 @@ export default function AISupport() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full bg-linear-to-br from-purple-600 via-yellow-500 to-pink-600 shadow-2xl border-2 border-yellow-300 flex items-center justify-center group"
+        className="fixed bottom-8 right-8 z-50 w-16 h-16 rounded-full bg-linear-to-br from-purple-600 via-blue-500 to-pink-600 shadow-2xl border-2 border-blue-300 flex items-center justify-center group"
       >
         <div className="relative">
           <Bot className="w-7 h-7 text-white" />
@@ -337,7 +337,7 @@ export default function AISupport() {
             <div className="absolute inset-0 bg-green-400 rounded-full animate-ping"></div>
           </div>
         </div>
-        <div className="absolute -top-12 right-0 bg-black/90 px-3 py-2 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity border border-yellow-300">
+        <div className="absolute -top-12 right-0 bg-black/90 px-3 py-2 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity border border-blue-300 text-blue-200 font-mono">
           AI Fashion Assistant
           <div className="absolute -bottom-1 right-6 w-2 h-2 bg-black/90 rotate-45"></div>
         </div>
@@ -350,7 +350,7 @@ export default function AISupport() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className={`fixed z-50 bg-neutral-900 border border-yellow-300/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col
+            className={`fixed z-50 bg-neutral-900 border border-blue-300/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col
               ${isFullscreen 
                 ? "inset-0 m-4 rounded-2xl" 
                 : "bottom-24 right-8 w-96 h-[600px]"
@@ -364,15 +364,15 @@ export default function AISupport() {
               height: 'auto'
             } : undefined}
           >
-            <div className="p-5 bg-linear-to-r from-neutral-800 to-neutral-900 border-b border-yellow-300/20 flex justify-between items-center">
+            <div className="p-5 bg-linear-to-r from-neutral-800 to-neutral-900 border-b border-blue-300/20 flex justify-between items-center">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-600 to-yellow-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-600 to-blue-500 flex items-center justify-center">
                   <Bot className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-yellow-300">NebulaAI</h3>
+                  <h3 className="font-bold  bg-gradient-to-r from-purple-600 to-blue-300  text-transparent inline-block bg-clip-text">NebulaAI</h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400">Fashion Assistant</span>
+                    <span className="text-xs  text-blue-200">Fashion Assistant</span>
                     {conversationContext.conversationHistory.length > 0 && (
                       <span className="text-xs text-purple-400">
                         Context: {conversationContext.conversationHistory.length}
@@ -426,7 +426,7 @@ export default function AISupport() {
                         ) : (
                           <User className="w-4 h-4 text-blue-400" />
                         )}
-                        <span className="text-xs font-medium text-yellow-300">
+                        <span className="text-xs font-medium text-blue-300">
                           {message.sender === "ai" ? "AI Assistant" : "You"}
                         </span>
                         {message.intentData && (
@@ -449,8 +449,8 @@ export default function AISupport() {
                       {message.sender === "ai" && message.relatedProducts && message.relatedProducts.length > 0 && (
                         <div className="mt-3 border-t border-white/10 pt-3">
                           <div className="flex items-center gap-2 mb-2">
-                            <ShoppingBag className="w-4 h-4 text-yellow-300" />
-                            <span className="text-xs font-medium text-yellow-300">
+                            <ShoppingBag className="w-4 h-4 text-blue-300" />
+                            <span className="text-xs font-medium text-blue-300">
                               {message.action === 'show_recommendations' ? 'Top Recommendations' : 
                                message.action === 'price_query' ? 'Price Matches' :
                                message.action === 'comparison' ? 'Comparison Products' :
@@ -466,7 +466,7 @@ export default function AISupport() {
                                 key={product.id}
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="bg-black/30 border border-white/10 rounded-lg p-3 hover:border-yellow-300/30 transition-all cursor-pointer hover:scale-[1.02]"
+                                className="bg-black/30 border border-white/10 rounded-lg p-3 hover:border-blue-300/30 transition-all cursor-pointer hover:scale-[1.02]"
                                 onClick={() => viewProductDetails(product)}
                               >
                                 <div className="flex items-center gap-3">
@@ -477,7 +477,7 @@ export default function AISupport() {
                                       className="w-12 h-12 object-cover rounded"
                                     />
                                     {product.rating >= 4.5 && (
-                                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-400 rounded-full flex items-center justify-center">
                                         <Star className="w-2 h-2 text-black" />
                                       </div>
                                     )}
@@ -488,14 +488,14 @@ export default function AISupport() {
                                         <h4 className="text-xs font-medium text-white">{product.name}</h4>
                                         <p className="text-xs text-gray-400">{product.brand} • {product.category}</p>
                                       </div>
-                                      <span className="text-xs font-bold text-yellow-300">₹{product.price}</span>
+                                      <span className="text-xs font-bold text-blue-300">₹{product.price}</span>
                                     </div>
                                     <div className="flex items-center gap-1 mt-1">
                                       <div className="flex">
                                         {[...Array(5)].map((_, i) => (
                                           <div
                                             key={i}
-                                            className={`w-2 h-2 rounded-full ${i < Math.floor(product.rating) ? 'bg-yellow-400' : 'bg-gray-700'}`}
+                                            className={`w-2 h-2 rounded-full ${i < Math.floor(product.rating) ? 'bg-blue-400' : 'bg-gray-700'}`}
                                           />
                                         ))}
                                       </div>
@@ -527,14 +527,14 @@ export default function AISupport() {
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-2xl p-4 bg-neutral-800/50 border border-neutral-700">
                     <div className="flex items-center gap-2 mb-2">
-                      <Bot className="w-4 h-4 text-yellow-300" />
-                      <span className="text-xs font-medium text-yellow-300">AI Assistant</span>
+                      <Bot className="w-4 h-4 text-blue-300" />
+                      <span className="text-xs font-medium text-blue-300">AI Assistant</span>
                       <span className="text-xs text-gray-500">Analyzing with NLP...</span>
                     </div>
                     <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-yellow-300 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-yellow-300 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
-                      <div className="w-2 h-2 bg-yellow-300 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
+                      <div className="w-2 h-2 bg-blue-300 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                      <div className="w-2 h-2 bg-blue-300 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
                     </div>
                   </div>
                 </div>
@@ -557,7 +557,7 @@ export default function AISupport() {
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     exit={{ scale: 0.9, opacity: 0 }}
-                    className="bg-neutral-900 border border-yellow-300/30 rounded-xl max-w-lg w-full max-h-[80vh] overflow-y-auto"
+                    className="bg-neutral-900 border border-blue-300/30 rounded-xl max-w-lg w-full max-h-[80vh] overflow-y-auto"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="p-6">
@@ -585,20 +585,20 @@ export default function AISupport() {
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
                           <div>
-                            <span className="text-2xl font-bold text-yellow-300">₹{selectedProduct.price}</span>
+                            <span className="text-2xl font-bold text-blue-300">₹{selectedProduct.price}</span>
                             <div className="flex items-center gap-2 mt-1">
                               <div className="flex">
                                 {[...Array(5)].map((_, i) => (
                                   <div
                                     key={i}
-                                    className={`w-3 h-3 rounded-full ${i < Math.floor(selectedProduct.rating) ? 'bg-yellow-400' : 'bg-gray-700'}`}
+                                    className={`w-3 h-3 rounded-full ${i < Math.floor(selectedProduct.rating) ? 'bg-blue-400' : 'bg-gray-700'}`}
                                   />
                                 ))}
                               </div>
                               <span className="text-sm text-gray-300">{selectedProduct.rating}/5</span>
                             </div>
                           </div>
-                          <button className="px-4 py-2 bg-linear-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-medium rounded-lg flex items-center gap-2">
+                          <button className="px-4 py-2 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-black font-medium rounded-lg flex items-center gap-2">
                             <ShoppingBag className="w-4 h-4" />
                             Add to Cart
                           </button>
@@ -634,7 +634,7 @@ export default function AISupport() {
                                 inputRef.current.focus()
                               }
                             }}
-                            className="w-full py-2 border border-yellow-300/30 text-yellow-300 rounded-lg hover:bg-yellow-300/10 transition-colors"
+                            className="w-full py-2 border border-blue-300/30 text-blue-300 rounded-lg hover:bg-blue-300/10 transition-colors"
                           >
                             Ask AI about this product
                           </button>
@@ -698,11 +698,11 @@ export default function AISupport() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Ask about products, prices, recommendations..."
-                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:border-yellow-300/50 focus:ring-1 focus:ring-yellow-300/30"
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:border-blue-300/50 focus:ring-1 focus:ring-blue-300/30"
                   />
                   <button
                     onClick={toggleVoiceInput}
-                    className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 ${isListening ? "text-red-400" : "text-gray-400 hover:text-yellow-300"}`}
+                    className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 ${isListening ? "text-red-400" : "text-gray-400 hover:text-blue-300"}`}
                     title="Voice input"
                   >
                     <Mic className="w-5 h-5" />
@@ -713,7 +713,7 @@ export default function AISupport() {
                   disabled={!input.trim()}
                   whileHover={input.trim() ? { scale: 1.05 } : {}}
                   whileTap={input.trim() ? { scale: 0.95 } : {}}
-                  className="px-5 bg-linear-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:from-neutral-700 disabled:to-neutral-800 disabled:cursor-not-allowed rounded-xl flex items-center justify-center transition-all"
+                  className="px-5 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:from-neutral-700 disabled:to-neutral-800 disabled:cursor-not-allowed rounded-xl flex items-center justify-center transition-all"
                 >
                   <Send className="w-5 h-5 text-black" />
                 </motion.button>
@@ -723,7 +723,7 @@ export default function AISupport() {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={clearChat}
-                    className="hover:text-yellow-300 transition-colors flex items-center gap-1"
+                    className="hover:text-blue-300 transition-colors flex items-center gap-1"
                   >
                     <X className="w-3 h-3" /> Clear chat
                   </button>
@@ -735,7 +735,7 @@ export default function AISupport() {
                           inputRef.current.focus();
                         }
                       }}
-                      className="hover:text-yellow-300 transition-colors"
+                      className="hover:text-blue-300 transition-colors"
                     >
                       Use context
                     </button>
@@ -743,7 +743,7 @@ export default function AISupport() {
                   {isFullscreen && (
                     <button
                       onClick={toggleFullscreen}
-                      className="hover:text-yellow-300 transition-colors"
+                      className="hover:text-blue-300 transition-colors"
                     >
                       Exit fullscreen (ESC)
                     </button>
