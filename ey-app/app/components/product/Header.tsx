@@ -4,6 +4,7 @@ import { useCart } from "@/card/CardContext";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Heart, ShoppingCart } from "lucide-react";
 import DataStat from "./DataStat";
+import Link from "next/link"
 
 interface NavItem {
   text: string;
@@ -65,12 +66,15 @@ export default function Header({ navItems }: { navItems: NavItem[] }) {
 
     
         <div className="relative">
+          <Link href= "/card">
           <ShoppingCart className="w-5 h-5 cursor-pointer" />
           {totalItems > 0 && (
             <span className="absolute -top-2 -right-2 bg-white text-black text-xs px-2 rounded-full">
               {totalItems}
             </span>
+          
           )}
+            </Link>
         </div>
       </div>
     </header>
