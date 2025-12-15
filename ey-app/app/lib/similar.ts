@@ -1,38 +1,31 @@
-import { Product } from "../types/products"
-import productsData from "../Collections/data/products.json"
-import { ProductRanker } from "./ranking"
+import { Product } from '../types/products'
+import productsData from '../Collections/data/products.json'
+import { ProductRanker } from './ranking'
 
 export interface SimilarityScore {
   product: Product
   score: number
   reasons: string[]
+  confidence: number
 }
 
+
 export class SimilarProductFinder {
-  private static allProducts: Product[] = productsData as Product[]
+  private static readonly allProducts: Product[] = productsData as Product[]
 
-  static async findSimilarProducts(
-    referenceProduct: Product,
-    limit: number = 5,
+  static findSimilarProducts(
+    reference: Product,
+    limit = 5,
     excludeIds: number[] = []
-  ): Promise<SimilarityScore[]> {
-    const products = this.allProducts.filter(p => 
-      p.id !== referenceProduct.id && 
-      !excludeIds.includes(p.id)
+  ): SimilarityScore[] {
+    return this.rankProducts(
+      this.allProducts.filter(p => p.id !== reference.id && !excludeIds.includes(p.id)),
+      p => this.similarityScore(reference, p),
+      limit
     )
-
-    const scoredProducts = products.map(product => {
-      const { score, reasons } = this.calculateSimilarity(referenceProduct, product)
-      return { product, score, reasons }
-    })
-
-    
-    return scoredProducts
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
   }
 
-  static async findSimilarByFeatures(
+  static findByFeatures(
     features: {
       category?: string
       brand?: string
@@ -41,97 +34,121 @@ export class SimilarProductFinder {
       minRating?: number
       styleKeywords?: string[]
     },
-    limit: number = 5
-  ): Promise<SimilarityScore[]> {
-    const products = this.allProducts.map(product => {
-      const { score, reasons } = this.calculateFeatureMatch(product, features)
-      return { product, score, reasons }
-    })
+    limit = 5
+  ): SimilarityScore[] {
+    return this.rankProducts(
+      this.allProducts,
+      p => this.featureScore(p, features),
+      limit
+    )
+  }
 
-    
+  static findComplementaryProducts(
+    base: Product,
+    limit = 3
+  ): SimilarityScore[] {
+    return this.rankProducts(
+      this.allProducts.filter(p => p.id !== base.id),
+      p => this.complementScore(base, p),
+      limit
+    )
+  }
+
+  static findFromUserBehavior(
+    viewedProductIds: number[],
+    limit = 5
+  ): SimilarityScore[] {
+    if (viewedProductIds.length === 0) return []
+
+    const anchor = this.allProducts.find(
+      p => p.id === viewedProductIds[viewedProductIds.length - 1]
+    )
+
+    if (!anchor) return []
+
+    return this.findSimilarProducts(anchor, limit, viewedProductIds)
+  }
+
+  
+  
+  
+
+  private static rankProducts(
+    products: Product[],
+    scorer: (p: Product) => Omit<SimilarityScore, 'product'>,
+    limit: number
+  ): SimilarityScore[] {
     return products
+      .map(p => ({ product: p, ...scorer(p) }))
+      .filter(r => r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
   }
 
-  static async findComplementaryProducts(
-    mainProduct: Product,
-    limit: number = 3
-  ): Promise<SimilarityScore[]> {
-    
-    const products = this.allProducts
-      .filter(p => p.id !== mainProduct.id)
-      .map(product => {
-        const { score, reasons } = this.calculateComplementarity(mainProduct, product)
-        return { product, score, reasons }
-      })
+  
+  
+  
 
-    return products
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
-  }
-
-  private static calculateSimilarity(productA: Product, productB: Product): {
-    score: number
-    reasons: string[]
-  } {
+  private static similarityScore(a: Product, b: Product) {
     let score = 0
     const reasons: string[] = []
 
     
-    if (productA.category === productB.category) {
-      score += 40
-      reasons.push(`Same category: ${productA.category}`)
-    } else if (this.areCategoriesRelated(productA.category, productB.category)) {
+    if (a.category === b.category) {
+      score += 35
+      reasons.push(`Same category (${a.category})`)
+    } else if (this.relatedCategory(a.category, b.category)) {
       score += 20
-      reasons.push(`Related categories: ${productA.category} → ${productB.category}`)
+      reasons.push('Related category')
     }
 
     
-    if (productA.brand === productB.brand) {
+    if (a.brand && a.brand === b.brand) {
       score += 20
-      reasons.push(`Same brand: ${productA.brand}`)
+      reasons.push(`Same brand (${a.brand})`)
     }
 
     
-    const priceDiff = Math.abs(productA.price - productB.price) / Math.max(productA.price, productB.price)
-    if (priceDiff < 0.3) { 
+    const priceDelta = Math.abs(a.price - b.price) / Math.max(a.price, b.price)
+    if (priceDelta < 0.25) {
       score += 15
-      reasons.push(`Similar price range: ₹${productA.price} → ₹${productB.price}`)
-    } else if (priceDiff < 0.5) {
+      reasons.push('Similar price')
+    } else if (priceDelta < 0.5) {
       score += 7
     }
 
     
-    const ratingDiff = Math.abs(productA.rating - productB.rating)
-    if (ratingDiff < 0.5) {
+    if (Math.abs(a.rating - b.rating) < 0.5) {
       score += 10
-      reasons.push(`Similar quality: ${productA.rating} → ${productB.rating} stars`)
+      reasons.push('Comparable quality')
     }
 
     
-    const keywordMatch = this.calculateKeywordSimilarity(productA, productB)
-    score += keywordMatch.score * 10
-    if (keywordMatch.matchedKeywords.length > 0) {
-      reasons.push(`Shared features: ${keywordMatch.matchedKeywords.slice(0, 3).join(', ')}`)
+    const textSim = this.keywordSimilarity(a.description, b.description)
+    if (textSim.value > 0) {
+      score += textSim.value * 10
+      reasons.push(`Shared features: ${textSim.keywords.slice(0, 3).join(', ')}`)
     }
 
     
-    const styleMatch = this.calculateStyleSimilarity(productA, productB)
-    score += styleMatch * 5
-    if (styleMatch > 0.5) {
-      reasons.push(`Similar style/design`)
+    score += Math.min(ProductRanker.getPopularityScore(b.id), 10)
+
+    const finalScore = Math.min(100, Math.round(score))
+
+    return {
+      score: finalScore,
+      reasons,
+      confidence: finalScore / 100
     }
-
-    
-    score = Math.min(score, 100)
-
-    return { score, reasons }
   }
 
-  private static calculateFeatureMatch(
+  
+  
+  
+
+  private static featureScore(
     product: Product,
-    features: {
+    f: {
       category?: string
       brand?: string
       minPrice?: number
@@ -139,204 +156,139 @@ export class SimilarProductFinder {
       minRating?: number
       styleKeywords?: string[]
     }
-  ): {
-    score: number
-    reasons: string[]
-  } {
+  ) {
     let score = 0
     const reasons: string[] = []
 
-    
-    if (features.category && product.category.toLowerCase().includes(features.category.toLowerCase())) {
+    if (f.category && product.category.toLowerCase().includes(f.category.toLowerCase())) {
       score += 30
-      reasons.push(`Category: ${features.category}`)
+      reasons.push('Category match')
     }
 
-    
-    if (features.brand && product.brand.toLowerCase().includes(features.brand.toLowerCase())) {
+    if (f.brand && product.brand?.toLowerCase().includes(f.brand.toLowerCase())) {
       score += 25
-      reasons.push(`Brand: ${features.brand}`)
+      reasons.push('Brand match')
     }
 
-    
-    if (features.minPrice !== undefined && features.maxPrice !== undefined) {
-      if (product.price >= features.minPrice && product.price <= features.maxPrice) {
+    if (f.minPrice !== undefined && f.maxPrice !== undefined) {
+      if (product.price >= f.minPrice && product.price <= f.maxPrice) {
         score += 25
-        reasons.push(`Price: ₹${features.minPrice}-₹${features.maxPrice}`)
+        reasons.push('Price match')
       }
     }
 
-    
-    if (features.minRating !== undefined && product.rating >= features.minRating) {
+    if (f.minRating !== undefined && product.rating >= f.minRating) {
       score += 10
-      reasons.push(`Rating: ${features.minRating}+ stars`)
+      reasons.push('Rating match')
     }
 
-    
-    if (features.styleKeywords && features.styleKeywords.length > 0) {
-      const description = (product.description || '').toLowerCase()
-      const matchedKeywords = features.styleKeywords.filter(keyword => 
-        description.includes(keyword.toLowerCase())
-      )
-      if (matchedKeywords.length > 0) {
-        score += 10 * matchedKeywords.length
-        reasons.push(`Style: ${matchedKeywords.join(', ')}`)
+    if (f.styleKeywords?.length) {
+      const matches = this.matchKeywords(product.description, f.styleKeywords)
+      if (matches.length) {
+        score += Math.min(matches.length * 8, 20)
+        reasons.push(`Style: ${matches.join(', ')}`)
       }
     }
 
-    
-    const popularity = ProductRanker.getPopularityScore(product.id)
-    score += Math.min(popularity, 10) 
+    score += Math.min(ProductRanker.getPopularityScore(product.id), 10)
 
-    return { score: Math.min(score, 100), reasons }
+    return {
+      score: Math.min(100, score),
+      reasons,
+      confidence: score / 100
+    }
   }
 
-  private static calculateComplementarity(productA: Product, productB: Product): {
-    score: number
-    reasons: string[]
-  } {
+  
+  
+  
+
+  private static complementScore(a: Product, b: Product) {
     let score = 0
     const reasons: string[] = []
 
-    
-    if (productA.category !== productB.category) {
+    if (a.category !== b.category) {
       score += 30
-      reasons.push(`Complements your ${productA.category}`)
+      reasons.push('Complements main product')
     }
 
-    
-    if (productB.category === 'Gloves' && productB.price < productA.price * 0.5) {
+    if (a.brand && a.brand === b.brand) {
+      score += 25
+      reasons.push('Brand consistency')
+    }
+
+    if (b.price < a.price * 0.6) {
+      score += 15
+      reasons.push('Affordable add-on')
+    }
+
+    const style = this.styleSimilarity(a.description, b.description)
+    if (style > 0.6) {
       score += 20
-      reasons.push(`Affordable accessory`)
+      reasons.push('Style compatible')
     }
 
-    
-    if (productA.brand === productB.brand) {
-      score += 25
-      reasons.push(`Matching ${productA.brand} brand`)
+    return {
+      score: Math.min(100, score),
+      reasons,
+      confidence: score / 100
     }
-
-    
-    const styleMatch = this.calculateStyleSimilarity(productA, productB)
-    if (styleMatch > 0.6) {
-      score += 25
-      reasons.push(`Coordinated style`)
-    }
-
-    return { score: Math.min(score, 100), reasons }
   }
 
-  private static areCategoriesRelated(categoryA: string, categoryB: string): boolean {
-    const relatedGroups = [
-      ['Jacket', 'Hoodie'], 
-      ['Pants', 'Gloves'], 
+  
+  
+  
+
+  private static relatedCategory(a: string, b: string): boolean {
+    const groups = [
+      ['Jacket', 'Hoodie'],
+      ['Pants', 'Shorts'],
+      ['Shoes', 'Socks']
     ]
-    
-    return relatedGroups.some(group => 
-      group.includes(categoryA) && group.includes(categoryB)
-    )
+
+    return groups.some(g => g.includes(a) && g.includes(b))
   }
 
-  private static calculateKeywordSimilarity(productA: Product, productB: Product): {
-    score: number
-    matchedKeywords: string[]
-  } {
-    const descA = (productA.description || '').toLowerCase()
-    const descB = (productB.description || '').toLowerCase()
-    
-    
-    const keywordsA = this.extractKeywords(descA)
-    const keywordsB = this.extractKeywords(descB)
-    
-    
-    const matchedKeywords = keywordsA.filter(keyword => 
-      keywordsB.includes(keyword) && keyword.length > 4
-    )
-    
-    
-    const maxPossible = Math.max(keywordsA.length, keywordsB.length)
-    const score = maxPossible > 0 ? matchedKeywords.length / maxPossible : 0
-    
-    return { score, matchedKeywords }
+  private static keywordSimilarity(a?: string, b?: string) {
+    if (!a || !b) return { value: 0, keywords: [] as string[] }
+
+    const ka = new Set(this.extractKeywords(a))
+    const kb = new Set(this.extractKeywords(b))
+
+    const matches = [...ka].filter(k => kb.has(k))
+    const max = Math.max(ka.size, kb.size)
+
+    return {
+      value: max ? matches.length / max : 0,
+      keywords: matches
+    }
   }
 
-  private static calculateStyleSimilarity(productA: Product, productB: Product): number {
-    const styleWords = [
-      'casual', 'formal', 'sporty', 'streetwear', 'elegant', 'minimalist',
-      'edgy', 'classic', 'modern', 'vintage', 'trendy', 'bold', 'subtle',
-      'comfortable', 'premium', 'luxury', 'affordable', 'statement'
-    ]
-    
-    const descA = (productA.description || '').toLowerCase()
-    const descB = (productB.description || '').toLowerCase()
-    
-    const stylesA = styleWords.filter(word => descA.includes(word))
-    const stylesB = styleWords.filter(word => descB.includes(word))
-    
-    if (stylesA.length === 0 && stylesB.length === 0) return 0
-    
-    const commonStyles = stylesA.filter(style => stylesB.includes(style))
-    const totalStyles = new Set([...stylesA, ...stylesB]).size
-    
-    return totalStyles > 0 ? commonStyles.length / totalStyles : 0
+  private static styleSimilarity(a?: string, b?: string): number {
+    if (!a || !b) return 0
+
+    const styles = ['casual', 'formal', 'sporty', 'streetwear', 'minimal', 'luxury']
+
+    const sa = styles.filter(s => a.toLowerCase().includes(s))
+    const sb = styles.filter(s => b.toLowerCase().includes(s))
+
+    const common = sa.filter(s => sb.includes(s))
+    const total = new Set([...sa, ...sb]).size
+
+    return total ? common.length / total : 0
+  }
+
+  private static matchKeywords(text = '', keys: string[]) {
+    const lower = text.toLowerCase()
+    return keys.filter(k => lower.includes(k.toLowerCase()))
   }
 
   private static extractKeywords(text: string): string[] {
-    
-    const stopWords = new Set([
-      'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-      'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
-      'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall',
-      'should', 'can', 'could', 'may', 'might', 'must'
-    ])
-    
+    const stop = new Set(['the', 'and', 'for', 'with', 'from', 'that', 'this'])
+
     return text
-      .split(/[^\w]+/)
-      .filter(word => 
-        word.length > 3 && 
-        !stopWords.has(word.toLowerCase()) &&
-        !/^\d+$/.test(word)
-      )
-      .map(word => word.toLowerCase())
-  }
-
-  static async getSimilarityExplanation(
-    referenceProduct: Product,
-    similarProduct: Product
-  ): Promise<string> {
-    const similarity = this.calculateSimilarity(referenceProduct, similarProduct)
-    
-    if (similarity.score >= 80) {
-      return `Very similar to ${referenceProduct.name}! They share ${similarity.reasons.slice(0, 2).join(' and ')}.`
-    } else if (similarity.score >= 60) {
-      return `Quite similar to ${referenceProduct.name}. ${similarity.reasons[0] || 'They have comparable features.'}`
-    } else if (similarity.score >= 40) {
-      return `Somewhat similar to ${referenceProduct.name}. ${similarity.reasons[0] || 'Consider this alternative.'}`
-    } else {
-      return `Alternative option to ${referenceProduct.name}. Different but worth considering.`
-    }
-  }
-
-  static async findSimilarByUserBehavior(
-    userId: string,
-    viewedProducts: number[],
-    limit: number = 5
-  ): Promise<SimilarityScore[]> {
-    
-    
-    if (viewedProducts.length === 0) {
-      return []
-    }
-    
-    
-    const recentProductId = viewedProducts[viewedProducts.length - 1]
-    const recentProduct = this.allProducts.find(p => p.id === recentProductId)
-    
-    if (!recentProduct) {
-      return []
-    }
-    
-    
-    return this.findSimilarProducts(recentProduct, limit, viewedProducts)
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(w => w.length > 3 && !stop.has(w))
   }
 }
