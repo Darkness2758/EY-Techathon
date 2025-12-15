@@ -28,6 +28,7 @@ import {
   Crown,
   Sparkles,
 } from "lucide-react";
+import { SimilarProductFinder } from "../lib/similar";
 import { motion, AnimatePresence } from "framer-motion";
 import { Product } from "../types/products";
 import {
@@ -190,6 +191,37 @@ export default function AISupport() {
         userInput,
         conversationContext
       );
+      if (nlpResponse.intent.type === "comparison") {
+
+        const query = userInput.toLowerCase();
+        const productsInQuery = allProducts.filter(p =>
+          query.includes(p.name.toLowerCase()) ||
+          query.includes(p.brand.toLowerCase())
+        );
+
+        if (productsInQuery.length > 0) {
+          const referenceProduct = productsInQuery[0];
+          const similar = await SimilarProductFinder.findSimilarProducts(
+            referenceProduct,
+            5
+          );
+
+          setMessages(prev => [
+            ...prev,
+            {
+              id: prev.length + 2,
+              sender: "ai",
+              text: `Here are products most similar to ${referenceProduct.name}, based on price, style, and category.`,
+              timestamp: new Date(),
+              relatedProducts: similar.map(s => s.product),
+              action: "comparison",
+            }
+          ]);
+
+          setIsTyping(false);
+          return;
+        }
+      }
 
       if (
         conversationState.waitingForResponse &&
@@ -324,7 +356,7 @@ export default function AISupport() {
   ): Promise<boolean> => {
     const intent = nlpResponse.intent;
 
-    // Check for missing information in product search
+
     if (intent.type === "show_products") {
       if (
         !intent.entities.category &&
@@ -347,7 +379,7 @@ export default function AISupport() {
       }
     }
 
-    // Check for recommendation preferences
+
     if (intent.type === "show_recommendations") {
       if (context.userPreferences?.preferredCategories?.length === 0) {
         const question =
@@ -427,7 +459,7 @@ export default function AISupport() {
       expectedResponse: undefined,
     });
 
-    // Now process the original request with updated context
+
     const aiResponse = await generateAIResponse(response, nlpResponse);
 
     let rankedProducts = aiResponse.relatedProducts || [];
@@ -491,6 +523,29 @@ export default function AISupport() {
         replies.push("Premium items");
         break;
 
+      case "comparison":
+
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage && lastMessage.sender === "user") {
+          const userText = lastMessage.text;
+
+          const productKeywords = ["jacket", "hoodie", "pants", "gloves", "shirt", "sweater"];
+          const foundKeyword = productKeywords.find(keyword =>
+            userText.toLowerCase().includes(keyword)
+          );
+
+          if (foundKeyword) {
+            replies.push(`More like this ${foundKeyword}`);
+            replies.push(`Compare with other ${foundKeyword}s`);
+            replies.push(`Alternatives to this ${foundKeyword}`);
+          } else if (products.length > 0) {
+            replies.push(`More like ${products[0].name}`);
+            replies.push(`Compare ${products[0].name} with others`);
+          }
+        }
+        replies.push("Show all comparisons");
+        break;
+
       default:
         replies.push("Show me jackets");
         replies.push("Recommend something");
@@ -498,12 +553,11 @@ export default function AISupport() {
         replies.push("Help me choose");
     }
 
-    // Add personalized suggestions based on user profile
     if (userProfile.stylePreferences.length > 0) {
       replies.push(`More ${userProfile.stylePreferences[0]} style`);
     }
 
-    // Add product-specific suggestions
+
     if (products.length > 0) {
       const firstProduct = products[0];
       replies.push(`Similar to ${firstProduct.name}`);
@@ -582,6 +636,7 @@ export default function AISupport() {
             "Show me Wink brand items",
             "I need something for a party",
             "What should I wear in winter?",
+            "Compare Wink hoodie with other brands",
           ];
           const randomCommand =
             demoCommands[Math.floor(Math.random() * demoCommands.length)];
@@ -648,23 +703,42 @@ export default function AISupport() {
       case "view":
         setSelectedProduct(product);
         ProductRanker.trackPopularity(product.id, "view");
+
+
+        const similarViewed = await SimilarProductFinder.findSimilarProducts(
+          product,
+          3
+        );
+
+        setMessages(prev => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            sender: "ai",
+            timestamp: new Date(),
+            text: `People who liked ${product.name} also explored these.`,
+            relatedProducts: similarViewed.map(s => s.product),
+          }
+        ]);
         break;
 
       case "like":
         ProductRanker.trackPopularity(product.id, "click");
-        setMessages((prev) => [
+
+        const complementary = await SimilarProductFinder.findComplementaryProducts(
+          product,
+          3
+        );
+
+        setMessages(prev => [
           ...prev,
           {
             id: prev.length + 1,
-            text: `👍 Great choice! I've noted your interest in ${product.name}. Would you like to see similar items?`,
             sender: "ai",
             timestamp: new Date(),
-            quickReplies: [
-              "Yes, show similar",
-              "No, thanks",
-              "More from this brand",
-            ],
-          },
+            text: `Nice pick. These pair well with ${product.name}:`,
+            relatedProducts: complementary.map(c => c.product),
+          }
         ]);
         break;
 
@@ -686,6 +760,26 @@ export default function AISupport() {
               "Continue shopping",
             ],
           },
+        ]);
+        break;
+
+      case "compare":
+
+        const similarForComparison = await SimilarProductFinder.findSimilarProducts(
+          product,
+          3
+        );
+
+        setMessages(prev => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            sender: "ai",
+            timestamp: new Date(),
+            text: `Comparing ${product.name} with similar alternatives:`,
+            relatedProducts: similarForComparison.map(s => s.product),
+            action: "comparison",
+          }
         ]);
         break;
     }
@@ -711,6 +805,7 @@ export default function AISupport() {
       "Wink brand products",
       "What's trending?",
       "Help me choose",
+      "Compare products",
     ];
 
     if (userProfile.stylePreferences.length > 0) {
@@ -799,6 +894,25 @@ export default function AISupport() {
     return null;
   };
 
+  const getSimilarityBadge = (similarityScore: number) => {
+    if (similarityScore > 0.8) {
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full border border-purple-500/40 bg-purple-500/20 text-purple-400 flex items-center gap-1">
+          <Sparkles className="w-2.5 h-2.5" />
+          Highly Similar
+        </span>
+      );
+    } else if (similarityScore > 0.6) {
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full border border-blue-500/40 bg-blue-500/20 text-blue-400 flex items-center gap-1">
+          <Star className="w-2.5 h-2.5" />
+          Good Match
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
     <>
       <motion.button
@@ -830,20 +944,25 @@ export default function AISupport() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             className={`fixed z-50 bg-neutral-900 border border-yellow-300/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col
+<<<<<<< Updated upstream
               ${isFullscreen 
                 ? "inset-0 m-4 rounded-2xl" 
+=======
+              ${isFullscreen
+                ? "inset-0 m-4 rounded-2xl"
+>>>>>>> Stashed changes
                 : "bottom-24 right-8 w-96 h-[600px]"
               }`}
             style={
               isFullscreen
                 ? {
-                    position: "fixed",
-                    top: "1rem",
-                    left: "1rem",
-                    right: "1rem",
-                    bottom: "1rem",
-                    height: "auto",
-                  }
+                  position: "fixed",
+                  top: "1rem",
+                  left: "1rem",
+                  right: "1rem",
+                  bottom: "1rem",
+                  height: "auto",
+                }
                 : undefined
             }
           >
@@ -907,29 +1026,26 @@ export default function AISupport() {
             </div>
 
             <div
-              className={`flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-950/50 ${
-                isFullscreen ? "min-h-0" : ""
-              }`}
+              className={`flex-1 overflow-y-auto p-4 space-y-4 bg-neutral-950/50 ${isFullscreen ? "min-h-0" : ""
+                }`}
             >
               {messages.map((message) => (
                 <div key={message.id}>
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${
-                      message.sender === "user"
+                    className={`flex ${message.sender === "user"
                         ? "justify-end"
                         : "justify-start"
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl p-4 ${
-                        message.sender === "user"
+                      className={`max-w-[80%] rounded-2xl p-4 ${message.sender === "user"
                           ? "bg-linear-to-br from-blue-900/30 to-blue-800/20 border border-blue-500/30"
                           : `${getIntentColor(
-                              message.intentData?.intent.type
-                            )} border`
-                      }`}
+                            message.intentData?.intent.type
+                          )} border`
+                        }`}
                     >
                       <div className="flex items-center gap-2 mb-2">
                         {message.sender === "ai" ? (
@@ -964,6 +1080,7 @@ export default function AISupport() {
                           </div>
                         )}
 
+<<<<<<< Updated upstream
                       {message.sender === "ai" && message.relatedProducts && message.relatedProducts.length > 0 && (
                         <div className="mt-3 border-t border-white/10 pt-3">
                           <div className="flex items-center gap-2 mb-2">
@@ -1028,6 +1145,182 @@ export default function AISupport() {
                                 </div>
                               </motion.div>
                             ))}
+=======
+                      {message.sender === "ai" &&
+                        message.relatedProducts &&
+                        message.relatedProducts.length > 0 && (
+                          <div className="mt-3 border-t border-white/10 pt-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              {message.action === "comparison" ? (
+                                <Sparkles className="w-4 h-4 text-purple-300" />
+                              ) : message.action === "show_recommendations" ? (
+                                <TrendingUp className="w-4 h-4 text-yellow-300" />
+                              ) : (
+                                <ShoppingBag className="w-4 h-4 text-yellow-300" />
+                              )}
+                              <span className="text-xs font-medium text-yellow-300">
+                                {message.action === "show_recommendations"
+                                  ? "Top Recommendations"
+                                  : message.action === "price_query"
+                                    ? "Price Matches"
+                                    : message.action === "comparison"
+                                      ? "Comparison Products"
+                                      : "Related Products"}
+                              </span>
+                              <span className="text-xs text-gray-400 ml-auto">
+                                {message.relatedProducts.length} products
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2">
+                              {message.relatedProducts.map((product, index) => {
+
+                                const isSimilarityBased = message.text.includes("similar") ||
+                                  message.text.includes("also explored") ||
+                                  message.text.includes("pair well");
+
+                                return (
+                                  <motion.div
+                                    key={product.id}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className="bg-black/30 border border-white/10 rounded-lg p-3 hover:border-yellow-300/30 transition-all cursor-pointer hover:scale-[1.02] relative group"
+                                  >
+                                    { }
+                                    <div className="absolute -top-2 -right-2 flex flex-col gap-1">
+                                      {getRankingBadge(
+                                        product,
+                                        index,
+                                        message.relatedProducts!.length
+                                      )}
+                                      {getSeasonalBadge(product.category)}
+                                      {getValueBadge(product)}
+                                      {isSimilarityBased && (
+                                        <span className="text-xs px-2 py-0.5 rounded-full border border-purple-500/40 bg-purple-500/20 text-purple-400">
+                                          <Sparkles className="w-2.5 h-2.5 inline mr-1" />
+                                          Related
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    { }
+                                    <div className="absolute -top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleProductAction(product, "like");
+                                        }}
+                                        className="p-1 bg-blue-500/20 border border-blue-500/30 rounded hover:bg-blue-500/30"
+                                        title="Like"
+                                      >
+                                        <ThumbsUp className="w-3 h-3 text-blue-400" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleProductAction(product, "save");
+                                        }}
+                                        className="p-1 bg-pink-500/20 border border-pink-500/30 rounded hover:bg-pink-500/30"
+                                        title="Save"
+                                      >
+                                        <Heart className="w-3 h-3 text-pink-400" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleProductAction(product, "compare");
+                                        }}
+                                        className="p-1 bg-purple-500/20 border border-purple-500/30 rounded hover:bg-purple-500/30"
+                                        title="Compare"
+                                      >
+                                        <Filter className="w-3 h-3 text-purple-400" />
+                                      </button>
+                                    </div>
+
+                                    <div
+                                      className="flex items-center gap-3"
+                                      onClick={() =>
+                                        handleProductAction(product, "view")
+                                      }
+                                    >
+                                      <div className="relative">
+                                        <img
+                                          src={product.image}
+                                          alt={product.name}
+                                          className="w-12 h-12 object-cover rounded"
+                                        />
+                                        {product.rating >= 4.5 && (
+                                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                                            <Star className="w-2 h-2 text-black" />
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="flex justify-between items-start">
+                                          <div>
+                                            <h4 className="text-xs font-medium text-white">
+                                              {product.name}
+                                            </h4>
+                                            <p className="text-xs text-gray-400">
+                                              {product.brand} • {product.category}
+                                            </p>
+                                          </div>
+                                          <span className="text-xs font-bold text-yellow-300">
+                                            ₹{product.price}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 mt-1">
+                                          <div className="flex">
+                                            {[...Array(5)].map((_, i) => (
+                                              <div
+                                                key={i}
+                                                className={`w-2 h-2 rounded-full ${i < Math.floor(product.rating)
+                                                    ? "bg-yellow-400"
+                                                    : "bg-gray-700"
+                                                  }`}
+                                              />
+                                            ))}
+                                          </div>
+                                          <span className="text-xs text-gray-400 ml-1">
+                                            {product.rating}
+                                          </span>
+                                          {message.intentData?.intent.entities
+                                            .priceRange && (
+                                              <span
+                                                className={`text-xs ml-2 px-1 rounded ${product.price <=
+                                                    (message.intentData.intent
+                                                      .entities.priceRange.max ||
+                                                      Infinity)
+                                                    ? "text-green-400 bg-green-400/10"
+                                                    : "text-red-400 bg-red-400/10"
+                                                  }`}
+                                              >
+                                                {product.price <=
+                                                  (message.intentData.intent.entities
+                                                    .priceRange.max || Infinity)
+                                                  ? "In budget"
+                                                  : "Over budget"}
+                                              </span>
+                                            )}
+                                          {isSimilarityBased && (
+                                            <span className="text-xs ml-2 px-1 rounded text-purple-400 bg-purple-400/10">
+                                              Pairs well
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                            {message.relatedProducts.length > 3 && (
+                              <p className="text-xs text-gray-400 mt-2">
+                                +{message.relatedProducts.length - 3} more
+                                products
+                              </p>
+                            )}
+>>>>>>> Stashed changes
                           </div>
                           {message.relatedProducts.length > 3 && (
                             <p className="text-xs text-gray-400 mt-2">
@@ -1118,7 +1411,14 @@ export default function AISupport() {
                                 {[...Array(5)].map((_, i) => (
                                   <div
                                     key={i}
+<<<<<<< Updated upstream
                                     className={`w-3 h-3 rounded-full ${i < Math.floor(selectedProduct.rating) ? 'bg-yellow-400' : 'bg-gray-700'}`}
+=======
+                                    className={`w-3 h-3 rounded-full ${i < Math.floor(selectedProduct.rating)
+                                        ? "bg-yellow-400"
+                                        : "bg-gray-700"
+                                      }`}
+>>>>>>> Stashed changes
                                   />
                                 ))}
                               </div>
@@ -1198,6 +1498,20 @@ export default function AISupport() {
                             <Sparkles className="w-4 h-4" />
                             Find similar products
                           </button>
+                          <button
+                            onClick={() => {
+                              const compareQuery = `Compare ${selectedProduct.name} with others`;
+                              setInput(compareQuery);
+                              closeProductDetails();
+                              if (inputRef.current) {
+                                inputRef.current.focus();
+                              }
+                            }}
+                            className="w-full py-2 border border-blue-300/30 text-blue-300 rounded-lg hover:bg-blue-300/10 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <Filter className="w-4 h-4" />
+                            Compare with alternatives
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1263,7 +1577,14 @@ export default function AISupport() {
                   />
                   <button
                     onClick={toggleVoiceInput}
+<<<<<<< Updated upstream
                     className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 ${isListening ? "text-red-400" : "text-gray-400 hover:text-yellow-300"}`}
+=======
+                    className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 ${isListening
+                        ? "text-red-400"
+                        : "text-gray-400 hover:text-yellow-300"
+                      }`}
+>>>>>>> Stashed changes
                     title="Voice input"
                   >
                     <Mic className="w-5 h-5" />
