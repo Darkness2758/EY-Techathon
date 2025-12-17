@@ -944,13 +944,9 @@ export default function AISupport() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             className={`fixed z-50 bg-neutral-900 border border-yellow-300/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col
-<<<<<<< Updated upstream
+
               ${isFullscreen 
                 ? "inset-0 m-4 rounded-2xl" 
-=======
-              ${isFullscreen
-                ? "inset-0 m-4 rounded-2xl"
->>>>>>> Stashed changes
                 : "bottom-24 right-8 w-96 h-[600px]"
               }`}
             style={
@@ -972,7 +968,7 @@ export default function AISupport() {
                   <Bot className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold  bg-gradient-to-r from-purple-600 to-blue-300  text-transparent inline-block bg-clip-text">NebulaAI</h3>
+                  <h3 className="font-bold  bg-linear-to-r from-purple-600 to-blue-300  text-transparent inline-block bg-clip-text">NebulaAI</h3>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400">Fashion Assistant</span>
                     {conversationContext.conversationHistory.length > 0 && (
@@ -1080,253 +1076,188 @@ export default function AISupport() {
                           </div>
                         )}
 
-<<<<<<< Updated upstream
                       {message.sender === "ai" && message.relatedProducts && message.relatedProducts.length > 0 && (
                         <div className="mt-3 border-t border-white/10 pt-3">
                           <div className="flex items-center gap-2 mb-2">
-                            <ShoppingBag className="w-4 h-4 text-yellow-300" />
+                            {message.action === "comparison" ? (
+                              <Sparkles className="w-4 h-4 text-purple-300" />
+                            ) : message.action === "show_recommendations" ? (
+                              <TrendingUp className="w-4 h-4 text-yellow-300" />
+                            ) : (
+                              <ShoppingBag className="w-4 h-4 text-yellow-300" />
+                            )}
                             <span className="text-xs font-medium text-yellow-300">
-                              {message.action === 'show_recommendations' ? 'Top Recommendations' : 
-                               message.action === 'price_query' ? 'Price Matches' :
-                               message.action === 'comparison' ? 'Comparison Products' :
-                               'Related Products'}
+                              {message.action === "show_recommendations"
+                                ? "Top Recommendations"
+                                : message.action === "price_query"
+                                  ? "Price Matches"
+                                  : message.action === "comparison"
+                                    ? "Comparison Products"
+                                    : "Related Products"}
                             </span>
                             <span className="text-xs text-gray-400 ml-auto">
                               {message.relatedProducts.length} products
                             </span>
                           </div>
                           <div className="grid grid-cols-1 gap-2">
-                            {message.relatedProducts.slice(0, 3).map((product) => (
-                              <motion.div
-                                key={product.id}
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="bg-black/30 border border-white/10 rounded-lg p-3 hover:border-yellow-300/30 transition-all cursor-pointer hover:scale-[1.02]"
-                                onClick={() => viewProductDetails(product)}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="relative">
-                                    <img
-                                      src={product.image}
-                                      alt={product.name}
-                                      className="w-12 h-12 object-cover rounded"
-                                    />
-                                    {product.rating >= 4.5 && (
-                                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
-                                        <Star className="w-2 h-2 text-black" />
-                                      </div>
+                            {message.relatedProducts.map((product, index) => {
+                              const isSimilarityBased = message.text.includes("similar") ||
+                                message.text.includes("also explored") ||
+                                message.text.includes("pair well");
+
+                              return (
+                                <motion.div
+                                  key={product.id}
+                                  initial={{ opacity: 0, scale: 0.95 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ delay: index * 0.1 }}
+                                  className="bg-black/30 border border-white/10 rounded-lg p-3 hover:border-yellow-300/30 transition-all cursor-pointer hover:scale-[1.02] relative group"
+                                >
+                                  <div className="absolute -top-2 -right-2 flex flex-col gap-1">
+                                    {getRankingBadge(
+                                      product,
+                                      index,
+                                      message.relatedProducts!.length
+                                    )}
+                                    {getSeasonalBadge(product.category)}
+                                    {getValueBadge(product)}
+                                    {isSimilarityBased && (
+                                      <span className="text-xs px-2 py-0.5 rounded-full border border-purple-500/40 bg-purple-500/20 text-purple-400">
+                                        <Sparkles className="w-2.5 h-2.5 inline mr-1" />
+                                        Related
+                                      </span>
                                     )}
                                   </div>
-                                  <div className="flex-1">
-                                    <div className="flex justify-between items-start">
-                                      <div>
-                                        <h4 className="text-xs font-medium text-white">{product.name}</h4>
-                                        <p className="text-xs text-gray-400">{product.brand} • {product.category}</p>
-                                      </div>
-                                      <span className="text-xs font-bold text-yellow-300">₹{product.price}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1 mt-1">
-                                      <div className="flex">
-                                        {[...Array(5)].map((_, i) => (
-                                          <div
-                                            key={i}
-                                            className={`w-2 h-2 rounded-full ${i < Math.floor(product.rating) ? 'bg-yellow-400' : 'bg-gray-700'}`}
-                                          />
-                                        ))}
-                                      </div>
-                                      <span className="text-xs text-gray-400 ml-1">{product.rating}</span>
-                                      {message.intentData?.intent.entities.priceRange && (
-                                        <span className={`text-xs ml-2 px-1 rounded ${product.price <= (message.intentData.intent.entities.priceRange.max || Infinity) ? 'text-green-400 bg-green-400/10' : 'text-red-400 bg-red-400/10'}`}>
-                                          {product.price <= (message.intentData.intent.entities.priceRange.max || Infinity) ? 'In budget' : 'Over budget'}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </motion.div>
-                            ))}
-=======
-                      {message.sender === "ai" &&
-                        message.relatedProducts &&
-                        message.relatedProducts.length > 0 && (
-                          <div className="mt-3 border-t border-white/10 pt-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              {message.action === "comparison" ? (
-                                <Sparkles className="w-4 h-4 text-purple-300" />
-                              ) : message.action === "show_recommendations" ? (
-                                <TrendingUp className="w-4 h-4 text-yellow-300" />
-                              ) : (
-                                <ShoppingBag className="w-4 h-4 text-yellow-300" />
-                              )}
-                              <span className="text-xs font-medium text-yellow-300">
-                                {message.action === "show_recommendations"
-                                  ? "Top Recommendations"
-                                  : message.action === "price_query"
-                                    ? "Price Matches"
-                                    : message.action === "comparison"
-                                      ? "Comparison Products"
-                                      : "Related Products"}
-                              </span>
-                              <span className="text-xs text-gray-400 ml-auto">
-                                {message.relatedProducts.length} products
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-1 gap-2">
-                              {message.relatedProducts.map((product, index) => {
 
-                                const isSimilarityBased = message.text.includes("similar") ||
-                                  message.text.includes("also explored") ||
-                                  message.text.includes("pair well");
-
-                                return (
-                                  <motion.div
-                                    key={product.id}
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    className="bg-black/30 border border-white/10 rounded-lg p-3 hover:border-yellow-300/30 transition-all cursor-pointer hover:scale-[1.02] relative group"
-                                  >
-                                    { }
-                                    <div className="absolute -top-2 -right-2 flex flex-col gap-1">
-                                      {getRankingBadge(
-                                        product,
-                                        index,
-                                        message.relatedProducts!.length
-                                      )}
-                                      {getSeasonalBadge(product.category)}
-                                      {getValueBadge(product)}
-                                      {isSimilarityBased && (
-                                        <span className="text-xs px-2 py-0.5 rounded-full border border-purple-500/40 bg-purple-500/20 text-purple-400">
-                                          <Sparkles className="w-2.5 h-2.5 inline mr-1" />
-                                          Related
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    { }
-                                    <div className="absolute -top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleProductAction(product, "like");
-                                        }}
-                                        className="p-1 bg-blue-500/20 border border-blue-500/30 rounded hover:bg-blue-500/30"
-                                        title="Like"
-                                      >
-                                        <ThumbsUp className="w-3 h-3 text-blue-400" />
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleProductAction(product, "save");
-                                        }}
-                                        className="p-1 bg-pink-500/20 border border-pink-500/30 rounded hover:bg-pink-500/30"
-                                        title="Save"
-                                      >
-                                        <Heart className="w-3 h-3 text-pink-400" />
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleProductAction(product, "compare");
-                                        }}
-                                        className="p-1 bg-purple-500/20 border border-purple-500/30 rounded hover:bg-purple-500/30"
-                                        title="Compare"
-                                      >
-                                        <Filter className="w-3 h-3 text-purple-400" />
-                                      </button>
-                                    </div>
-
-                                    <div
-                                      className="flex items-center gap-3"
-                                      onClick={() =>
-                                        handleProductAction(product, "view")
-                                      }
+                                  <div className="absolute -top-2 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleProductAction(product, "like");
+                                      }}
+                                      className="p-1 bg-blue-500/20 border border-blue-500/30 rounded hover:bg-blue-500/30"
+                                      title="Like"
                                     >
-                                      <div className="relative">
-                                        <img
-                                          src={product.image}
-                                          alt={product.name}
-                                          className="w-12 h-12 object-cover rounded"
-                                        />
-                                        {product.rating >= 4.5 && (
-                                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
-                                            <Star className="w-2 h-2 text-black" />
-                                          </div>
-                                        )}
-                                      </div>
-                                      <div className="flex-1">
-                                        <div className="flex justify-between items-start">
-                                          <div>
-                                            <h4 className="text-xs font-medium text-white">
-                                              {product.name}
-                                            </h4>
-                                            <p className="text-xs text-gray-400">
-                                              {product.brand} • {product.category}
-                                            </p>
-                                          </div>
-                                          <span className="text-xs font-bold text-yellow-300">
-                                            ₹{product.price}
-                                          </span>
+                                      <ThumbsUp className="w-3 h-3 text-blue-400" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleProductAction(product, "save");
+                                      }}
+                                      className="p-1 bg-pink-500/20 border border-pink-500/30 rounded hover:bg-pink-500/30"
+                                      title="Save"
+                                    >
+                                      <Heart className="w-3 h-3 text-pink-400" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleProductAction(product, "compare");
+                                      }}
+                                      className="p-1 bg-purple-500/20 border border-purple-500/30 rounded hover:bg-purple-500/30"
+                                      title="Compare"
+                                    >
+                                      <Filter className="w-3 h-3 text-purple-400" />
+                                    </button>
+                                  </div>
+
+                                  <div
+                                    className="flex items-center gap-3"
+                                    onClick={() =>
+                                      handleProductAction(product, "view")
+                                    }
+                                  >
+                                    <div className="relative">
+                                      <img
+                                        src={product.image}
+                                        alt={product.name}
+                                        className="w-12 h-12 object-cover rounded"
+                                      />
+                                      {product.rating >= 4.5 && (
+                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                                          <Star className="w-2 h-2 text-black" />
                                         </div>
-                                        <div className="flex items-center gap-1 mt-1">
-                                          <div className="flex">
-                                            {[...Array(5)].map((_, i) => (
-                                              <div
-                                                key={i}
-                                                className={`w-2 h-2 rounded-full ${i < Math.floor(product.rating)
-                                                    ? "bg-yellow-400"
-                                                    : "bg-gray-700"
-                                                  }`}
-                                              />
-                                            ))}
-                                          </div>
-                                          <span className="text-xs text-gray-400 ml-1">
-                                            {product.rating}
-                                          </span>
-                                          {message.intentData?.intent.entities
-                                            .priceRange && (
-                                              <span
-                                                className={`text-xs ml-2 px-1 rounded ${product.price <=
-                                                    (message.intentData.intent
-                                                      .entities.priceRange.max ||
-                                                      Infinity)
-                                                    ? "text-green-400 bg-green-400/10"
-                                                    : "text-red-400 bg-red-400/10"
-                                                  }`}
-                                              >
-                                                {product.price <=
-                                                  (message.intentData.intent.entities
-                                                    .priceRange.max || Infinity)
-                                                  ? "In budget"
-                                                  : "Over budget"}
-                                              </span>
-                                            )}
-                                          {isSimilarityBased && (
-                                            <span className="text-xs ml-2 px-1 rounded text-purple-400 bg-purple-400/10">
-                                              Pairs well
+                                      )}
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <h4 className="text-xs font-medium text-white">
+                                            {product.name}
+                                          </h4>
+                                          <p className="text-xs text-gray-400">
+                                            {product.brand} • {product.category}
+                                          </p>
+                                        </div>
+                                        <span className="text-xs font-bold text-yellow-300">
+                                          ₹{product.price}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1 mt-1">
+                                        <div className="flex">
+                                          {[...Array(5)].map((_, i) => (
+                                            <div
+                                              key={i}
+                                              className={`w-2 h-2 rounded-full ${i < Math.floor(product.rating)
+                                                  ? "bg-yellow-400"
+                                                  : "bg-gray-700"
+                                                }`}
+                                            />
+                                          ))}
+                                        </div>
+                                        <span className="text-xs text-gray-400 ml-1">
+                                          {product.rating}
+                                        </span>
+                                        {message.intentData?.intent.entities
+                                          .priceRange && (
+                                            <span
+                                              className={`text-xs ml-2 px-1 rounded ${product.price <=
+                                                  (message.intentData.intent
+                                                    .entities.priceRange.max ||
+                                                    Infinity)
+                                                  ? "text-green-400 bg-green-400/10"
+                                                  : "text-red-400 bg-red-400/10"
+                                                }`}
+                                            >
+                                              {product.price <=
+                                                (message.intentData.intent.entities
+                                                  .priceRange.max || Infinity)
+                                                ? "In budget"
+                                                : "Over budget"}
                                             </span>
                                           )}
-                                        </div>
+                                        {isSimilarityBased && (
+                                          <span className="text-xs ml-2 px-1 rounded text-purple-400 bg-purple-400/10">
+                                            Pairs well
+                                          </span>
+                                        )}
                                       </div>
                                     </div>
-                                  </motion.div>
-                                );
-                              })}
-                            </div>
-                            {message.relatedProducts.length > 3 && (
-                              <p className="text-xs text-gray-400 mt-2">
-                                +{message.relatedProducts.length - 3} more
-                                products
-                              </p>
-                            )}
->>>>>>> Stashed changes
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
                           </div>
                           {message.relatedProducts.length > 3 && (
                             <p className="text-xs text-gray-400 mt-2">
                               +{message.relatedProducts.length - 3} more products
                             </p>
                           )}
+                        </div>
+                      )}
+
+                      {message.quickReplies && message.quickReplies.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {message.quickReplies.map((reply, index) => (
+                            <button
+                              key={index}
+                              onClick={() => handleQuickReply(reply)}
+                              className="px-3 py-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-white/10 rounded-lg transition-colors"
+                            >
+                              {reply}
+                            </button>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -1353,6 +1284,7 @@ export default function AISupport() {
 
               <div ref={messagesEndRef} />
             </div>
+
             <AnimatePresence>
               {selectedProduct && (
                 <motion.div
@@ -1411,14 +1343,7 @@ export default function AISupport() {
                                 {[...Array(5)].map((_, i) => (
                                   <div
                                     key={i}
-<<<<<<< Updated upstream
                                     className={`w-3 h-3 rounded-full ${i < Math.floor(selectedProduct.rating) ? 'bg-yellow-400' : 'bg-gray-700'}`}
-=======
-                                    className={`w-3 h-3 rounded-full ${i < Math.floor(selectedProduct.rating)
-                                        ? "bg-yellow-400"
-                                        : "bg-gray-700"
-                                      }`}
->>>>>>> Stashed changes
                                   />
                                 ))}
                               </div>
@@ -1479,7 +1404,7 @@ export default function AISupport() {
                                 inputRef.current.focus();
                               }
                             }}
-                            className="w-full py-2 border border-yellow-300/30 text-yellow-300 rounded-lg hover:bg-yellow-300/10 transition-colors"
+                            className="w-full py-2 border border-yellow-300/30 text-yellow-300 rounded-lg hover:bg-yellow-300/10 transition-colors flex items-center justify-center gap-2"
                           >
                             <Bot className="w-4 h-4" />
                             Ask AI about this product
@@ -1519,6 +1444,7 @@ export default function AISupport() {
                 </motion.div>
               )}
             </AnimatePresence>
+
             {!isFullscreen && messages.length <= 4 && (
               <div className="px-4 pb-3">
                 <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
@@ -1541,6 +1467,7 @@ export default function AISupport() {
                 </div>
               </div>
             )}
+
             <div className="p-4 border-t border-neutral-800 bg-neutral-900 space-y-3">
               {isListening && (
                 <motion.div
@@ -1577,14 +1504,7 @@ export default function AISupport() {
                   />
                   <button
                     onClick={toggleVoiceInput}
-<<<<<<< Updated upstream
                     className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 ${isListening ? "text-red-400" : "text-gray-400 hover:text-yellow-300"}`}
-=======
-                    className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 ${isListening
-                        ? "text-red-400"
-                        : "text-gray-400 hover:text-yellow-300"
-                      }`}
->>>>>>> Stashed changes
                     title="Voice input"
                   >
                     <Mic className="w-5 h-5" />
